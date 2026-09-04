@@ -1,36 +1,15 @@
+import Details from "../components/Details";
+
 export default function BuyerRiskEngine({ onContinue }) {
   return (
     <div className="px-gutter-desktop py-space-xl max-w-[88rem] mx-auto w-full flex flex-col gap-space-xl">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
-        <div className="flex flex-col gap-space-3xs">
-          <div className="flex items-center gap-space-2xs text-body-sm font-body-sm">
-            <span className="font-mono-data-cell text-mono-data-cell text-primary font-semibold">STAGE 03 / 05</span>
-            <span className="text-on-surface-variant/40">•</span>
-            <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">
-              Real-time Credit Scrim
-            </span>
-          </div>
-          <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">
-            Buyer Risk &amp; Verification Engine
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-            Automated multi-ledger underwriting synthesis cross-referencing SARS tax registries,
-            enterprise ERP settlement telemetry, and Absa Corporate clearing records.
-          </p>
-        </div>
-        <div className="flex items-center gap-space-sm bg-surface-container-lowest p-space-xs rounded-xl shadow-sm">
-          <div className="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined">shield</span>
-          </div>
-          <div className="flex flex-col pr-space-sm">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
-              Model Confidence
-            </span>
-            <span className="font-mono-data-cell text-mono-data-cell font-bold text-on-surface">
-              99.84% Verified
-            </span>
-          </div>
-        </div>
+      <div className="flex flex-col gap-space-3xs">
+        <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">
+          Buyer risk check
+        </h1>
+        <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+          How likely is XYZ Corporation to pay this invoice on time?
+        </p>
       </div>
 
       {/* Headline approval card */}
@@ -43,10 +22,6 @@ export default function BuyerRiskEngine({ onContinue }) {
               <span className="inline-flex items-center gap-space-2xs bg-tertiary-container text-on-tertiary px-space-sm py-space-3xs rounded-full font-label-caps text-label-caps uppercase tracking-wider font-semibold shadow-sm">
                 <span className="material-symbols-outlined text-[1rem]">verified</span>
                 Invoice Funding Risk: Grade A
-              </span>
-              <span className="inline-flex items-center gap-space-3xs bg-surface-container text-on-surface px-space-xs py-space-3xs rounded-full font-label-caps text-label-caps uppercase">
-                <span className="w-2 h-2 rounded-full bg-tertiary-container animate-ping"></span>
-                Immediate Factoring Eligible
               </span>
             </div>
             <div className="flex flex-col gap-space-3xs">
@@ -62,8 +37,7 @@ export default function BuyerRiskEngine({ onContinue }) {
                 </span>
               </div>
               <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">
-                Based on verified Tax Invoice #INV-2026-8891 (Face Value: R 185,000.00) issued to
-                XYZ Corporation (Pty) Ltd.
+                Invoice INV-1042, face value R 185,000.00, issued to XYZ Corporation.
               </p>
             </div>
           </div>
@@ -112,37 +86,16 @@ export default function BuyerRiskEngine({ onContinue }) {
               </span>
             </div>
             <div className="flex flex-col gap-space-sm pt-space-xs">
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex flex-col gap-space-3xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">SARS Tax Structure</span>
-                  <span className="font-label-caps text-label-caps text-tertiary font-bold uppercase">VERIFIED</span>
+              <p className="font-body-md text-body-md text-on-surface">
+                Tax structure verified, purchase order matched 1:1, and no duplicate submission found.
+              </p>
+              <Details>
+                <div className="flex flex-col gap-space-2xs font-body-sm text-body-sm text-on-surface-variant">
+                  <div className="flex justify-between gap-space-sm"><span>VAT registration</span><span className="text-on-surface">#4090184491</span></div>
+                  <div className="flex justify-between gap-space-sm"><span>ERP purchase order</span><span className="text-on-surface">SAP-PO-882944-ZA</span></div>
+                  <div className="flex justify-between gap-space-sm"><span>Duplicate screening</span><span className="text-on-surface">14 clearing nodes, 0 matches</span></div>
                 </div>
-                <span className="font-mono-data-cell text-mono-data-cell text-on-surface">
-                  VAT Registration #4090184491
-                </span>
-              </div>
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex flex-col gap-space-3xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">PO Reconciliation</span>
-                  <span className="font-label-caps text-label-caps text-tertiary font-bold uppercase">
-                    MATCHED 1:1
-                  </span>
-                </div>
-                <span className="font-mono-data-cell text-mono-data-cell text-on-surface">
-                  ERP Ref: SAP-PO-882944-ZA
-                </span>
-              </div>
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex flex-col gap-space-3xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">Consortium Registry</span>
-                  <span className="font-mono-data-cell text-mono-data-cell font-bold text-on-surface">
-                    0 Duplicates
-                  </span>
-                </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  Screened against 14 Southern African clearing nodes.
-                </p>
-              </div>
+              </Details>
             </div>
           </div>
           <div className="flex items-center justify-between p-space-xs rounded-lg bg-surface-container">
@@ -208,21 +161,15 @@ export default function BuyerRiskEngine({ onContinue }) {
               </div>
             </div>
             <div className="flex flex-col gap-space-xs">
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex items-center justify-between">
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Bureau Rating</span>
-                <span className="font-mono-data-cell text-mono-data-cell font-bold text-on-surface">
-                  AAA- (Absa Corporate)
-                </span>
-              </div>
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex flex-col gap-space-3xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">Settlement Velocity</span>
-                  <span className="font-mono-data-cell text-mono-data-cell font-bold text-tertiary">28 Days Avg</span>
+              <p className="font-body-md text-body-md text-on-surface">
+                Settles 32 days inside its own 60-day terms, on average.
+              </p>
+              <Details>
+                <div className="flex flex-col gap-space-2xs font-body-sm text-body-sm text-on-surface-variant">
+                  <div className="flex justify-between gap-space-sm"><span>Bureau rating</span><span className="text-on-surface">AAA- (Absa Corporate)</span></div>
+                  <div className="flex justify-between gap-space-sm"><span>Settlement velocity</span><span className="text-on-surface">28 days average</span></div>
                 </div>
-                <p className="font-body-sm text-body-sm text-tertiary-container font-medium">
-                  Settle 32 days ahead of contract 60-day baseline.
-                </p>
-              </div>
+              </Details>
             </div>
           </div>
           <div className="flex items-center justify-between p-space-xs rounded-lg bg-surface-container text-body-sm font-body-sm">
@@ -267,24 +214,16 @@ export default function BuyerRiskEngine({ onContinue }) {
               </div>
             </div>
             <div className="flex flex-col gap-space-xs">
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex items-center justify-between">
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Fulfillment Cycle</span>
-                <span className="font-mono-data-cell text-mono-data-cell font-bold text-on-surface">
-                  14 Days (On Schedule)
-                </span>
-              </div>
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex items-center justify-between">
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Supplier KYB Tier</span>
-                <span className="font-mono-data-cell text-mono-data-cell font-semibold text-tertiary">
-                  Gold Enterprise SME
-                </span>
-              </div>
-              <div className="p-space-xs rounded-lg bg-surface-container-low flex items-center justify-between">
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Retention Rate</span>
-                <span className="font-mono-data-cell text-mono-data-cell font-semibold text-on-surface">
-                  100% Repeat Debtor
-                </span>
-              </div>
+              <p className="font-body-md text-body-md text-on-surface">
+                18 contracts delivered, none disputed.
+              </p>
+              <Details>
+                <div className="flex flex-col gap-space-2xs font-body-sm text-body-sm text-on-surface-variant">
+                  <div className="flex justify-between gap-space-sm"><span>Fulfilment cycle</span><span className="text-on-surface">14 days, on schedule</span></div>
+                  <div className="flex justify-between gap-space-sm"><span>Supplier KYB tier</span><span className="text-on-surface">Gold</span></div>
+                  <div className="flex justify-between gap-space-sm"><span>Retention</span><span className="text-on-surface">100% repeat debtor</span></div>
+                </div>
+              </Details>
             </div>
           </div>
           <div className="flex items-center justify-between p-space-xs rounded-lg bg-surface-container text-body-sm font-body-sm">
@@ -298,22 +237,7 @@ export default function BuyerRiskEngine({ onContinue }) {
 
       {/* Footer actions */}
       <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-space-md pt-space-xs pb-space-xl">
-        <div className="flex items-center gap-space-sm w-full sm:w-auto">
-          <button
-            type="button"
-            className="w-full sm:w-auto px-space-md py-space-sm bg-surface-container-lowest text-on-surface font-body-sm text-body-sm font-semibold rounded-lg shadow-sm hover:bg-surface-container-high transition-colors flex items-center justify-center gap-space-2xs"
-          >
-            <span className="material-symbols-outlined text-[1.125rem]">file_present</span>
-            <span>View Raw Credit Bureau Report</span>
-          </button>
-          <button
-            type="button"
-            className="hidden md:flex px-space-md py-space-sm bg-surface-container-lowest text-on-surface-variant font-body-sm text-body-sm rounded-lg shadow-sm hover:bg-surface-container-high transition-colors items-center justify-center gap-space-2xs"
-          >
-            <span className="material-symbols-outlined text-[1.125rem]">history</span>
-            <span>Ledger History</span>
-          </button>
-        </div>
+          <div />
         <div className="flex items-center gap-space-sm w-full sm:w-auto">
           <button
             type="button"

@@ -26,32 +26,14 @@ export default function InstantFundingOffer({ onContinue }) {
 
   return (
     <div className="w-full flex flex-col">
-      {/* Pipeline banner */}
-      <section className="w-full bg-surface-container-low px-gutter-desktop py-space-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-space-sm">
-        <div className="flex items-center gap-space-sm flex-wrap">
-          <div className="flex items-center gap-space-2xs bg-primary-container text-on-primary px-space-xs py-space-3xs rounded-full">
-            <span className="material-symbols-outlined text-[1rem]">verified</span>
-            <span className="font-label-caps text-label-caps tracking-widest uppercase">Stage 4 / 5 Active</span>
-          </div>
-          <div className="flex items-center gap-space-2xs">
-            <span className="font-title-sm text-title-sm text-on-surface">Invoice Decision Gateway:</span>
-            <span className="font-mono-data-cell text-mono-data-cell bg-surface-container-lowest px-space-xs py-space-3xs rounded text-primary font-semibold">
-              #INV-1042
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-space-md text-on-surface-variant font-body-sm text-body-sm">
-          <span className="flex items-center gap-space-3xs text-tertiary font-semibold">
-            <span className="material-symbols-outlined text-[0.875rem]">check_circle</span> Debtor Validated
-          </span>
-          <span className="flex items-center gap-space-3xs text-tertiary font-semibold">
-            <span className="material-symbols-outlined text-[0.875rem]">security</span> Underwriting Passed
-          </span>
-          <span className="hidden sm:flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell">
-            Latency: 1.4s
-          </span>
-        </div>
-      </section>
+      <div className="max-w-container-max mx-auto w-full px-gutter-desktop pt-space-lg">
+        <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">
+          Your funding offer
+        </h1>
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          Invoice INV-1042 to XYZ Corporation, R185,000 due 31 October.
+        </p>
+      </div>
 
       <div className="max-w-container-max mx-auto w-full px-gutter-desktop py-space-xl flex flex-col gap-space-xl">
 
@@ -74,7 +56,7 @@ export default function InstantFundingOffer({ onContinue }) {
                     Debtor: XYZ Corporation (Pty) Ltd
                   </span>
                   <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant/70">
-                    Contract Terms: Net 60 Days
+                    
                   </span>
                 </div>
               </div>
@@ -94,10 +76,10 @@ export default function InstantFundingOffer({ onContinue }) {
                     {zar(ADVANCE_CAP)}
                   </span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">
-                    Tier-1 Institutional Debtor Tier
+                    
                   </span>
                   <span className="font-mono-data-cell text-mono-data-cell text-tertiary">
-                    Full Collateral Verification Passed
+                    
                   </span>
                 </div>
               </div>
@@ -228,7 +210,7 @@ export default function InstantFundingOffer({ onContinue }) {
                     Lifecycle &amp; Settlement Protocol
                   </span>
                 </div>
-                <span className="font-label-caps text-label-caps text-tertiary bg-surface-container-low px-space-xs py-space-3xs rounded-full">
+                <span className="hidden font-label-caps text-label-caps text-tertiary bg-surface-container-low px-space-xs py-space-3xs rounded-full">
                   OFF-BALANCE-SHEET SALE
                 </span>
               </div>
@@ -333,7 +315,7 @@ export default function InstantFundingOffer({ onContinue }) {
                   {zar(net)}
                 </span>
                 <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Real-Time Clearing (RTC) Enabled
+                  
                 </span>
               </div>
 
@@ -357,7 +339,7 @@ export default function InstantFundingOffer({ onContinue }) {
                 />
                 <label className="cursor-pointer select-none" htmlFor="accept-terms">
                   I agree to the <a className="text-primary underline" href="#">Absa Receivables Purchase Agreement</a>{" "}
-                  and irrevocably instruct debtor remittance diversion.
+                  and authorise collection from the buyer on the due date.
                 </label>
               </div>
 

@@ -1,11 +1,6 @@
 import { useRef, useState } from "react";
 import { SCENARIOS, zar } from "../data/scenarios";
 
-const CARD_META = {
-  A: { accent: "bg-primary-container", badge: "bg-surface-container-low text-tertiary", dot: "bg-tertiary", cta: "bg-primary-container text-on-primary hover:bg-primary", ctaLabel: "Selected" },
-  B: { accent: "bg-secondary-fixed", badge: "bg-secondary-fixed text-on-secondary-fixed-variant", dot: "bg-secondary", cta: "bg-surface-container text-on-surface hover:bg-surface-container-high", ctaLabel: "Test Scenario B →" },
-  C: { accent: "bg-error", badge: "bg-error-container text-error", dot: "bg-error", cta: "bg-error text-on-error hover:bg-primary", ctaLabel: "Test Duplicate Rule →" },
-};
 
 export default function UploadIngestion({ onContinue }) {
   const [scenario, setScenario] = useState("A");
@@ -54,8 +49,7 @@ export default function UploadIngestion({ onContinue }) {
             >
               <span className="material-symbols-outlined text-[2.5rem] text-primary mb-space-xs">description</span>
               <p className="font-body-md text-body-md text-secondary max-w-md mb-space-md">
-                Upload verified tax invoices or purchase orders from enterprise buyers (30–90 day
-                terms). Supported formats: PDF, TIFF, JPG up to 25MB.
+                Drop in an invoice from a corporate buyer. PDF, TIFF or JPG, up to 25MB.
               </p>
               <div className="flex items-center gap-space-sm flex-wrap justify-center">
                 <label className="px-space-md py-space-xs bg-primary-container text-on-primary rounded-lg font-body-sm text-body-sm font-bold hover:bg-primary transition-all cursor-pointer shadow-sm flex items-center gap-space-2xs">
@@ -78,20 +72,6 @@ export default function UploadIngestion({ onContinue }) {
                   <span>Load Sample Tax Invoice (PDF)</span>
                 </button>
               </div>
-              <div className="mt-space-md flex items-center gap-space-md text-on-surface-variant font-mono-data-cell text-mono-data-cell flex-wrap justify-center">
-                <span className="flex items-center gap-space-3xs">
-                  <span className="material-symbols-outlined text-[0.875rem] text-tertiary">check_circle</span> SARS
-                  Compliant
-                </span>
-                <span className="flex items-center gap-space-3xs">
-                  <span className="material-symbols-outlined text-[0.875rem] text-tertiary">check_circle</span> PO
-                  Cross-Match
-                </span>
-                <span className="flex items-center gap-space-3xs">
-                  <span className="material-symbols-outlined text-[0.875rem] text-tertiary">check_circle</span>{" "}
-                  Zero-Knowledge KYC
-                </span>
-              </div>
             </div>
 
             {/* Active file indicator */}
@@ -102,9 +82,7 @@ export default function UploadIngestion({ onContinue }) {
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="font-body-sm text-body-sm font-bold text-on-surface">{filename}</span>
-                  <span className="font-mono-data-cell text-mono-data-cell text-secondary">
-                    3.4 MB • SHA256: 7f8a9...b4012
-                  </span>
+                  <span className="font-mono-data-cell text-mono-data-cell text-secondary">3.4 MB</span>
                 </div>
               </div>
               <div className="flex items-center gap-space-xs">

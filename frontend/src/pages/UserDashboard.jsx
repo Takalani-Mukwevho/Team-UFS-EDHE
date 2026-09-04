@@ -1,23 +1,22 @@
 import { useState } from "react";
-import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import UploadIngestion from "./UploadIngestion";
 import OcrExtractionReview from "./OcrExtractionReview";
 import BuyerRiskEngine from "./BuyerRiskEngine";
 import InstantFundingOffer from "./InstantFundingOffer";
-// import RiskExceptions from "./RiskExceptions";
 
 const PAGES = {
   upload: UploadIngestion,
   ocr: OcrExtractionReview,
   risk: BuyerRiskEngine,
   funding: InstantFundingOffer,
-  // exceptions: RiskExceptions,
 };
+
+const ORDER = ["upload", "ocr", "risk", "funding"];
 
 export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("upload");
-  const [runKey, setRunKey] = useState(0); // used to force-reset child state on "Demo Reset"
+  const [runKey, setRunKey] = useState(0); // force-reset child state on "Reset"
 
   const ActivePage = PAGES[activeTab];
 
@@ -31,24 +30,20 @@ export default function UserDashboard() {
     setRunKey((k) => k + 1);
   }
 
-  // Sidebar is fixed at 256px and Header is fixed at left-64, so the content
-  // column offsets by exactly those two: pl-64 horizontally, pt-16 vertically.
+  // Header is the only navigation and is fixed at 64px tall, so the content
+  // needs vertical clearance only. No sidebar, no horizontal offset.
   return (
     <div className="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen">
-      <Sidebar active={activeTab} onNavigate={goTo} onReset={handleReset} />
-      <div className="pl-64">
-        <Header active={activeTab} onNavigate={goTo} />
-        <main className="w-full pt-16 bg-surface min-h-screen">
-          <ActivePage
-            key={`${activeTab}-${runKey}`}
-            onContinue={() => {
-              const order = ["upload", "ocr", "risk", "funding"];
-              const next = order[order.indexOf(activeTab) + 1];
-              if (next) goTo(next);
-            }}
-          />
-        </main>
-      </div>
+      <Header active={activeTab} onNavigate={goTo} onReset={handleReset} />
+      <main className="w-full pt-16 min-h-screen">
+        <ActivePage
+          key={`${activeTab}-${runKey}`}
+          onContinue={() => {
+            const next = ORDER[ORDER.indexOf(activeTab) + 1];
+            if (next) goTo(next);
+          }}
+        />
+      </main>
     </div>
   );
 }
