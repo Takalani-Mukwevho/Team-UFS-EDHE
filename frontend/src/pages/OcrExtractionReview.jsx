@@ -506,7 +506,6 @@ export default function OcrExtractionReview({ onContinue }) {
             </div>
           </div>
 
-
         </div>
       </div>
 

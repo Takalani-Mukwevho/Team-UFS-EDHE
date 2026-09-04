@@ -1,21 +1,21 @@
 import { useState, useMemo, useCallback, Fragment } from 'react'
-import { CASES, SEED_AUDIT, ANALYST } from './data/cases.js'
-import { scoreCase } from './engine/scoring.js'
-import { fmt } from './engine/format.js'
+import { CASES, SEED_AUDIT, ANALYST } from '../data/cases.js'
+import { scoreCase } from '../engine/scoring.js'
+import { fmt } from '../engine/format.js'
 
-import Masthead from './components/Masthead.jsx'
-import MetricStrip from './components/MetricStrip.jsx'
-import InvoicePicker from './components/InvoicePicker.jsx'
-import Section from './components/Section.jsx'
-import ExtractedFields from './components/ExtractedFields.jsx'
-import Checks from './components/Checks.jsx'
-import BuyerSection from './components/BuyerSection.jsx'
-import RiskSection from './components/RiskSection.jsx'
-import DecisionSection from './components/DecisionSection.jsx'
-import Settled from './components/Settled.jsx'
-import AuditTrail from './components/AuditTrail.jsx'
+import Masthead from '../components/Masthead.jsx'
+import MetricStrip from '../components/MetricStrip.jsx'
+import InvoicePicker from '../components/InvoicePicker.jsx'
+import Section from '../components/Section.jsx'
+import ExtractedFields from '../components/ExtractedFields.jsx'
+import Checks from '../components/Checks.jsx'
+import BuyerSection from '../components/BuyerSection.jsx'
+import RiskSection from '../components/RiskSection.jsx'
+import DecisionSection from '../components/DecisionSection.jsx'
+import Settled from '../components/Settled.jsx'
+import AuditTrail from '../components/AuditTrail.jsx'
 
-export default function App() {
+export default function BankingDashboard() {
   const [cases, setCases] = useState(CASES)
   const [selectedId, setSelectedId] = useState('c1')
   const [audit, setAudit] = useState(SEED_AUDIT)
