@@ -66,59 +66,68 @@ public class DynamoService : IDynamoService
         await _dynamoClient.PutItemAsync(request);
     }
 
-    public async Task<Invoice?> GetInvoiceAsync(string invoiceId)
+    public async Task<Invoice?> GetInvoiceAsync(string invoiceIdOrNumber)
     {
+        // 1. Direct lookup by Table Partition Key (InvoiceNumber)
         var request = new GetItemRequest
         {
             TableName = _invoiceTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                { "InvoiceId", new AttributeValue { S = invoiceId } }
+                { "InvoiceNumber", new AttributeValue { S = invoiceIdOrNumber } }
             }
         };
 
         var response = await _dynamoClient.GetItemAsync(request);
-        if (response.Item.Count == 0)
-            return null;
+        if (response.Item != null && response.Item.Count > 0)
+            return DeserializeInvoice(response.Item);
 
-        return DeserializeInvoice(response.Item);
+        // 2. Fallback scan if the caller passed InvoiceId (e.g. "demo-inv-001") instead of InvoiceNumber
+        var scanRequest = new ScanRequest
+        {
+            TableName = _invoiceTable,
+            FilterExpression = "InvoiceId = :val OR InvoiceNumber = :val",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                { ":val", new AttributeValue { S = invoiceIdOrNumber } }
+            }
+        };
+
+        var scanResponse = await _dynamoClient.ScanAsync(scanRequest);
+        return scanResponse.Items.Select(DeserializeInvoice).FirstOrDefault();
     }
 
     public async Task<List<Invoice>> GetInvoicesBySmeAsync(string smeId)
     {
-        var request = new QueryRequest
+        var request = new ScanRequest
         {
             TableName = _invoiceTable,
-            IndexName = "SmeId-index",
-            KeyConditionExpression = "SmeId = :smeId",
+            FilterExpression = "SmeId = :smeId",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
                 { ":smeId", new AttributeValue { S = smeId } }
             }
         };
 
-        var response = await _dynamoClient.QueryAsync(request);
+        var response = await _dynamoClient.ScanAsync(request);
         return response.Items.Select(DeserializeInvoice).ToList();
     }
 
     public async Task<List<Invoice>> GetInvoicesByBuyerAsync(string buyerId)
     {
-        var request = new QueryRequest
+        var request = new ScanRequest
         {
             TableName = _invoiceTable,
-            IndexName = "BuyerId-index",
-            KeyConditionExpression = "BuyerId = :buyerId",
+            FilterExpression = "BuyerId = :buyerId",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
                 { ":buyerId", new AttributeValue { S = buyerId } }
             }
         };
 
-        var response = await _dynamoClient.QueryAsync(request);
+        var response = await _dynamoClient.ScanAsync(request);
         return response.Items.Select(DeserializeInvoice).ToList();
-    }
-
-    public async Task SaveBuyerAsync(Buyer buyer)
+    }    public async Task SaveBuyerAsync(Buyer buyer)
     {
         var item = new Dictionary<string, AttributeValue>
         {
@@ -212,29 +221,41 @@ public class DynamoService : IDynamoService
         return DeserializeSME(response.Item);
     }
 
+    private static string GetString(Dictionary<string, AttributeValue> item, string key, string defaultValue = "") =>
+        item.TryGetValue(key, out var val) && val.S != null ? val.S : defaultValue;
+
+    private static decimal GetDecimal(Dictionary<string, AttributeValue> item, string key, decimal defaultValue = 0m) =>
+        item.TryGetValue(key, out var val) && decimal.TryParse(val.N, out var d) ? d : defaultValue;
+
+    private static int GetInt(Dictionary<string, AttributeValue> item, string key, int defaultValue = 0) =>
+        item.TryGetValue(key, out var val) && int.TryParse(val.N, out var i) ? i : defaultValue;
+
+    private static bool GetBool(Dictionary<string, AttributeValue> item, string key, bool defaultValue = false) =>
+        item.TryGetValue(key, out var val) && val.BOOL;
+
     private Invoice DeserializeInvoice(Dictionary<string, AttributeValue> item)
     {
         return new Invoice
         {
-            InvoiceId = item["InvoiceId"].S,
-            SmeId = item["SmeId"].S,
-            BuyerId = item["BuyerId"].S,
-            InvoiceNumber = item["InvoiceNumber"].S,
-            Amount = decimal.Parse(item["Amount"].N),
-            Currency = item["Currency"].S,
-            IssueDate = DateTime.Parse(item["IssueDate"].S),
-            DueDate = DateTime.Parse(item["DueDate"].S),
-            Status = Enum.Parse<InvoiceStatus>(item["Status"].S),
-            S3Key = item["S3Key"].S,
-            DocumentHash = item["DocumentHash"].S,
+            InvoiceId = GetString(item, "InvoiceId", Guid.NewGuid().ToString()),
+            SmeId = GetString(item, "SmeId"),
+            BuyerId = GetString(item, "BuyerId"),
+            InvoiceNumber = GetString(item, "InvoiceNumber"),
+            Amount = GetDecimal(item, "Amount"),
+            Currency = GetString(item, "Currency", "ZAR"),
+            IssueDate = item.TryGetValue("IssueDate", out var id) && DateTime.TryParse(id.S, out var dtId) ? dtId : DateTime.UtcNow,
+            DueDate = item.TryGetValue("DueDate", out var dd) && DateTime.TryParse(dd.S, out var dtDd) ? dtDd : DateTime.UtcNow.AddDays(30),
+            Status = item.TryGetValue("Status", out var st) && Enum.TryParse<InvoiceStatus>(st.S, out var s) ? s : InvoiceStatus.Pending,
+            S3Key = GetString(item, "S3Key"),
+            DocumentHash = GetString(item, "DocumentHash"),
             ExtractedData = item.ContainsKey("ExtractedData")
                 ? JsonSerializer.Deserialize<ExtractedData>(item["ExtractedData"].S)
                 : null,
             FundingDecision = item.ContainsKey("FundingDecision")
                 ? JsonSerializer.Deserialize<FundingDecision>(item["FundingDecision"].S)
                 : null,
-            CreatedAt = DateTime.Parse(item["CreatedAt"].S),
-            UpdatedAt = DateTime.Parse(item["UpdatedAt"].S)
+            CreatedAt = item.TryGetValue("CreatedAt", out var ca) && DateTime.TryParse(ca.S, out var dtCa) ? dtCa : DateTime.UtcNow,
+            UpdatedAt = item.TryGetValue("UpdatedAt", out var ua) && DateTime.TryParse(ua.S, out var dtUa) ? dtUa : DateTime.UtcNow
         };
     }
 
@@ -242,16 +263,16 @@ public class DynamoService : IDynamoService
     {
         return new Buyer
         {
-            BuyerId = item["BuyerId"].S,
-            CompanyName = item["CompanyName"].S,
-            RegistrationNumber = item["RegistrationNumber"].S,
-            Industry = item["Industry"].S,
-            ContactEmail = item["ContactEmail"].S,
-            ContactPhone = item["ContactPhone"].S,
-            Address = item["Address"].S,
-            CreditRating = Enum.Parse<CreditRating>(item["CreditRating"].S),
-            IsActive = item["IsActive"].BOOL,
-            CreatedAt = DateTime.Parse(item["CreatedAt"].S),
+            BuyerId = GetString(item, "BuyerId"),
+            CompanyName = GetString(item, "CompanyName"),
+            RegistrationNumber = GetString(item, "RegistrationNumber"),
+            Industry = GetString(item, "Industry"),
+            ContactEmail = GetString(item, "ContactEmail"),
+            ContactPhone = GetString(item, "ContactPhone"),
+            Address = GetString(item, "Address"),
+            CreditRating = item.TryGetValue("CreditRating", out var cr) && Enum.TryParse<CreditRating>(cr.S, out var r) ? r : CreditRating.Standard,
+            IsActive = GetBool(item, "IsActive", true),
+            CreatedAt = item.TryGetValue("CreatedAt", out var ca) && DateTime.TryParse(ca.S, out var dtCa) ? dtCa : DateTime.UtcNow,
             PaymentHistory = item.ContainsKey("PaymentHistory")
                 ? JsonSerializer.Deserialize<PaymentHistory>(item["PaymentHistory"].S) ?? new PaymentHistory()
                 : new PaymentHistory()
@@ -262,21 +283,20 @@ public class DynamoService : IDynamoService
     {
         return new SME
         {
-            SmeId = item["SmeId"].S,
-            CompanyName = item["CompanyName"].S,
-            RegistrationNumber = item["RegistrationNumber"].S,
-            Industry = item["Industry"].S,
-            YearsInOperation = int.Parse(item["YearsInOperation"].N),
-            AnnualRevenue = decimal.Parse(item["AnnualRevenue"].N),
-            ContactEmail = item["ContactEmail"].S,
-            ContactPhone = item["ContactPhone"].S,
-            Address = item["Address"].S,
-            BankAccountNumber = item["BankAccountNumber"].S,
-            IsVerified = item["IsVerified"].BOOL,
-            VerificationDate = item.ContainsKey("VerificationDate")
-                ? DateTime.Parse(item["VerificationDate"].S)
-                : null,
-            CreatedAt = DateTime.Parse(item["CreatedAt"].S)
+            SmeId = GetString(item, "SmeId"),
+            CompanyName = GetString(item, "CompanyName"),
+            RegistrationNumber = GetString(item, "RegistrationNumber"),
+            Industry = GetString(item, "Industry"),
+            YearsInOperation = GetInt(item, "YearsInOperation"),
+            AnnualRevenue = GetDecimal(item, "AnnualRevenue"),
+            ContactEmail = GetString(item, "ContactEmail"),
+            ContactPhone = GetString(item, "ContactPhone"),
+            Address = GetString(item, "Address"),
+            BankAccountNumber = GetString(item, "BankAccountNumber"),
+            IsVerified = GetBool(item, "IsVerified", false),
+            VerificationDate = item.TryGetValue("VerificationDate", out var vd) && DateTime.TryParse(vd.S, out var dtVd) ? dtVd : null,
+            CreatedAt = item.TryGetValue("CreatedAt", out var ca) && DateTime.TryParse(ca.S, out var dtCa) ? dtCa : DateTime.UtcNow
         };
     }
+
 }

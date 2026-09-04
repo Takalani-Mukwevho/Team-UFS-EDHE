@@ -65,9 +65,6 @@ public class VerificationService : IVerificationService
         if (invoice.DueDate <= invoice.IssueDate)
             return false;
 
-        if (invoice.ExtractedData == null)
-            return false;
-
         return true;
     }
 
