@@ -5,7 +5,7 @@ import { fmt } from './engine/format.js'
 
 import Masthead from './components/Masthead.jsx'
 import MetricStrip from './components/MetricStrip.jsx'
-import Queue from './components/Queue.jsx'
+import InvoicePicker from './components/InvoicePicker.jsx'
 import Section from './components/Section.jsx'
 import ExtractedFields from './components/ExtractedFields.jsx'
 import Checks from './components/Checks.jsx'
@@ -17,13 +17,11 @@ import AuditTrail from './components/AuditTrail.jsx'
 
 export default function App() {
   const [cases, setCases] = useState(CASES)
-  const [tab, setTab] = useState('awaiting')
   const [selectedId, setSelectedId] = useState('c1')
   const [audit, setAudit] = useState(SEED_AUDIT)
 
   const withRisk = useMemo(() => cases.map((c) => ({ ...c, risk: scoreCase(c) })), [cases])
-  const shown = withRisk.filter((c) => c.status === tab)
-  const selected = withRisk.find((c) => c.id === selectedId) || shown[0] || withRisk[0]
+  const selected = withRisk.find((c) => c.id === selectedId) || withRisk[0]
 
   const counts = {
     awaiting: withRisk.filter((c) => c.status === 'awaiting').length,
@@ -43,7 +41,6 @@ export default function App() {
       at: 'Today ' + at, who: ANALYST.name, inv: c.fields.invoiceNumber, sme: c.sme,
       engine: d.engineLine, final: d.finalLine, overridden: d.overridden, reason: d.reason,
     }].concat(prev))
-    setTab('decided')
   }, [])
 
   return (
@@ -54,29 +51,24 @@ export default function App() {
         overrides={overrides} fundedCount={funded.length}
       />
 
-      <div className="cols">
-        <Queue
-          cases={shown} tab={tab} counts={counts} selectedId={selected.id}
-          onTab={setTab} onSelect={setSelectedId}
-        />
-
-        <section className="panel">
-          <div className="case-head">
-            <div>
-              <div className="case-no">{selected.fields.invoiceNumber} &middot; submitted {selected.submitted}</div>
-              <div className="case-sme">{selected.sme}</div>
-              <div className="case-sub">
-                Buyer: {selected.buyer} &middot; due {selected.fields.dueDate} &middot; {selected.fields.termsDays}-day terms
-                {!selected.smeVerified && ' \u00b7 KYB pending'}
-              </div>
-            </div>
-            <div className="case-amt">
-              <span className="v">{fmt(selected.fields.amount)}</span>
-              <span className="l">invoice value</span>
+      <section className="panel">
+        <div className="case-head">
+          <div className="case-head-main">
+            <InvoicePicker cases={withRisk} selected={selected} onSelect={setSelectedId} />
+            <div className="case-sub">
+              Buyer: {selected.buyer} &middot; submitted {selected.submitted} &middot; due {selected.fields.dueDate}
+              {' '}&middot; {selected.fields.termsDays}-day terms
+              {!selected.smeVerified && ' · KYB pending'}
             </div>
           </div>
+          <div className="case-amt">
+            <span className="v">{fmt(selected.fields.amount)}</span>
+            <span className="l">invoice value</span>
+          </div>
+        </div>
 
-          {selected.status === 'blocked' ? (
+        {selected.status === 'blocked' ? (
+          <Fragment>
             <Section title="Blocked at verification">
               <div className="rec decline">
                 <div>
@@ -88,21 +80,21 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div style={{ marginTop: 14 }}><Checks c={selected} /></div>
             </Section>
-          ) : (
-            <Fragment>
-              <ExtractedFields c={selected} />
-              <Checks c={selected} />
-              <BuyerSection c={selected} />
-              <RiskSection risk={selected.risk} />
-              {selected.status === 'decided'
-                ? <Settled c={selected} />
-                : <DecisionSection c={selected} risk={selected.risk} onDecide={(d) => decide(selected, d)} />}
-            </Fragment>
-          )}
-        </section>
-      </div>
+            <Checks c={selected} />
+          </Fragment>
+        ) : (
+          <Fragment>
+            <ExtractedFields c={selected} />
+            <Checks c={selected} />
+            <BuyerSection c={selected} />
+            <RiskSection risk={selected.risk} />
+            {selected.status === 'decided'
+              ? <Settled c={selected} />
+              : <DecisionSection c={selected} risk={selected.risk} onDecide={(d) => decide(selected, d)} />}
+          </Fragment>
+        )}
+      </section>
 
       <AuditTrail entries={audit} overrides={overrides} />
 

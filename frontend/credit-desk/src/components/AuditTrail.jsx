@@ -1,10 +1,18 @@
+import { useState } from 'react'
+import Chevron from './Chevron.jsx'
+
 export default function AuditTrail({ entries, overrides }) {
+  const [open, setOpen] = useState(false)
+
   return (
-    <section className="panel audit">
-      <div className="phead">
-        <span className="eyebrow">Audit trail</span>
+    <details className="panel audit" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="phead">
+        <span className="phead-l">
+          <Chevron />
+          <span className="eyebrow">Audit trail</span>
+        </span>
         <span className="conf">{entries.length} entries &middot; {overrides} override{overrides === 1 ? '' : 's'}</span>
-      </div>
+      </summary>
       {entries.length === 0 ? (
         <div className="aempty">No decisions recorded.</div>
       ) : (
@@ -15,7 +23,7 @@ export default function AuditTrail({ entries, overrides }) {
               <span className="h">{a.inv} &middot; {a.sme}</span>
               <span className="r" style={{ display: 'block' }}>
                 Engine: {a.engine} &rarr; Final: {a.final} &middot; {a.who}
-                {a.reason ? ' \u2014 ' + a.reason : ''}
+                {a.reason ? ' — ' + a.reason : ''}
               </span>
             </span>
             <span className={'pill ' + (a.overridden ? 'p-med' : 'p-neutral')}>
@@ -24,6 +32,6 @@ export default function AuditTrail({ entries, overrides }) {
           </div>
         ))
       )}
-    </section>
+    </details>
   )
 }

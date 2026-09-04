@@ -5,7 +5,8 @@ import { BUYERS } from '../data/buyers.js'
 export default function BuyerSection({ c }) {
   const b = BUYERS[c.buyer];
   return (
-    <Section title="Buyer" right={<span className="conf">{b.sector}</span>}>
+    <Section title="Buyer and settlement history" collapsible defaultOpen={false}
+      right={<span className="conf">{b.sector} &middot; {Math.round(b.onTimeRate * 100)}% on time &middot; {b.avgSettlementDays}d avg</span>}>
       <div className="buyer-grid">
         <div><div className="bl">Settled invoices</div><div className="bv">{b.historicalInvoices}</div></div>
         <div><div className="bl">Paid on time</div><div className="bv">{Math.round(b.onTimeRate * 100)}%</div></div>

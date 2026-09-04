@@ -5,7 +5,7 @@ export default function Checks({ c }) {
   const checks = mkChecks(c.checksPass, c.dupNote);
   const passed = checks.filter((x) => x.pass).length;
   return (
-    <Section title="Verification" right={<span className="conf">{passed} / {checks.length} passed</span>}>
+    <Section title="Verification" collapsible defaultOpen={false} right={<span className="conf">{passed} / {checks.length} passed</span>}>
       <div className="checks">
         {checks.map((x) => (
           <div className="check" key={x.name}>

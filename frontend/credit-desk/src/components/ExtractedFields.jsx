@@ -15,7 +15,7 @@ export default function ExtractedFields({ c }) {
   const vals = Object.values(conf);
   const low = vals.filter((v) => v < 92).length;
   return (
-    <Section title="Extracted fields"
+    <Section title="Extracted fields" collapsible defaultOpen={false}
       right={<span className="conf">{low > 0 ? low + " field" + (low > 1 ? "s" : "") + " below 92% — check the document" : "all fields above 92%"}</span>}>
       <div className="tbl-scroll">
         <table>
