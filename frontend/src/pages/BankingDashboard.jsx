@@ -44,7 +44,7 @@ export default function BankingDashboard() {
   }, [])
 
   return (
-    <Fragment>
+    <div className="wrap">
       <Masthead />
       <MetricStrip
         counts={counts} advanced={advanced} exposure={exposure}
@@ -103,6 +103,6 @@ export default function BankingDashboard() {
         risk weights are illustrative and set for the demo; commercial terms in a real deployment would be determined by
         the bank. The scoring engine here is identical to the one behind the SME-facing app.
       </p>
-    </Fragment>
+    </div>
   )
 }

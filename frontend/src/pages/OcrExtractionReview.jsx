@@ -28,7 +28,7 @@ export default function OcrExtractionReview({ onContinue }) {
     : "bg-surface-container-low";
 
   return (
-    <div className="max-w-[88rem] mx-auto w-full px-space-md lg:px-space-xl py-space-md flex flex-col gap-space-md">
+    <div className="max-w-[88rem] mx-auto w-full px-space-md lg:px-space-xl py-space-md pb-28 flex flex-col gap-space-md">
       {/* Progress Ribbon */}
       <div className="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-lowest p-space-sm rounded-xl shadow-sm">
         <div className="flex items-center gap-space-xs">
@@ -104,9 +104,9 @@ export default function OcrExtractionReview({ onContinue }) {
       </div>
 
       {/* Split screen: document viewer + editable form */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-space-md items-start">
         {/* LEFT: interactive document viewer */}
-        <div className="lg:col-span-6 flex flex-col gap-space-xs">
+        <div className="xl:col-span-7 flex flex-col gap-space-xs min-w-0">
           <div className="bg-surface-container-lowest rounded-xl p-space-xs shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-space-xs">
               <span className="material-symbols-outlined text-primary text-[1.25rem]">picture_as_pdf</span>
@@ -132,7 +132,7 @@ export default function OcrExtractionReview({ onContinue }) {
           </div>
 
           <div className="relative bg-surface-container-lowest rounded-xl shadow-md p-space-md lg:p-space-lg overflow-hidden select-none">
-            <div className="absolute right-4 bottom-4 text-surface-container font-headline-xl font-bold opacity-30 pointer-events-none">
+            <div className="absolute right-4 top-4 text-surface-container font-headline-xl font-bold opacity-30 pointer-events-none hidden xl:block">
               ABSA AI OCR
             </div>
             <div className="flex flex-col gap-space-md">
@@ -177,7 +177,7 @@ export default function OcrExtractionReview({ onContinue }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-space-md pt-space-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md pt-space-xs">
                 <div className="bg-surface-container-low/60 p-space-xs rounded-lg flex flex-col">
                   <span className="font-label-caps text-label-caps text-on-surface-variant uppercase font-bold mb-space-3xs">
                     BILLED TO:
@@ -201,11 +201,11 @@ export default function OcrExtractionReview({ onContinue }) {
                     onClick={() => highlightField("field-due-date")}
                   >
                     <span className="text-on-surface-variant">Payment Due:</span>
-                    <div className="relative">
-                      <span className="relative z-10 font-mono-data-cell text-on-surface font-bold bg-surface-container-lowest px-space-xs py-space-3xs rounded shadow-sm">
+                    <div className="flex items-center gap-space-2xs">
+                      <span className="font-mono-data-cell text-on-surface font-bold bg-surface-container-lowest px-space-xs py-space-3xs rounded shadow-sm">
                         31/10/2026
                       </span>
-                      <span className="absolute -top-2.5 -right-2 z-20 font-mono-data-cell text-[0.5625rem] bg-tertiary text-on-tertiary px-1 rounded">
+                      <span className="font-mono-data-cell text-[0.5625rem] bg-tertiary text-on-tertiary px-1 rounded shrink-0">
                         99.1%
                       </span>
                     </div>
@@ -215,11 +215,11 @@ export default function OcrExtractionReview({ onContinue }) {
                     onClick={() => highlightField("field-terms")}
                   >
                     <span className="text-on-surface-variant">Credit Terms:</span>
-                    <div className="relative">
-                      <span className="relative z-10 font-mono-data-cell text-on-surface font-bold bg-surface-container-lowest px-space-xs py-space-3xs rounded shadow-sm">
+                    <div className="flex items-center gap-space-2xs">
+                      <span className="font-mono-data-cell text-on-surface font-bold bg-surface-container-lowest px-space-xs py-space-3xs rounded shadow-sm">
                         60 Days net
                       </span>
-                      <span className="absolute -top-2.5 -right-2 z-20 font-mono-data-cell text-[0.5625rem] bg-tertiary text-on-tertiary px-1 rounded">
+                      <span className="font-mono-data-cell text-[0.5625rem] bg-tertiary text-on-tertiary px-1 rounded shrink-0">
                         97.9%
                       </span>
                     </div>
@@ -234,22 +234,21 @@ export default function OcrExtractionReview({ onContinue }) {
               </div>
 
               <div className="flex flex-col bg-surface-container-low rounded-lg overflow-hidden">
-                <div className="grid grid-cols-12 bg-surface-container-high px-space-sm py-space-xs text-on-surface-variant font-label-caps text-label-caps uppercase font-bold">
-                  <div className="col-span-1">Item</div>
-                  <div className="col-span-6">Description / Scope of Work</div>
-                  <div className="col-span-2 text-right">Qty / Unit</div>
-                  <div className="col-span-3 text-right">Net Amount</div>
+                <div className="flex items-center gap-space-sm bg-surface-container-high px-space-sm py-space-xs text-on-surface-variant font-label-caps text-label-caps uppercase font-bold">
+                  <div className="flex-1 min-w-0">Description / Scope of Work</div>
+                  <div className="w-20 text-right shrink-0">Qty</div>
+                  <div className="w-32 text-right shrink-0">Net Amount</div>
                 </div>
-                <div className="grid grid-cols-12 px-space-sm py-space-xs bg-surface-container-lowest items-center text-body-sm border-b border-surface-container-low">
-                  <div className="col-span-1 font-mono-data-cell text-on-surface-variant">01</div>
-                  <div className="col-span-6 font-medium text-on-surface">
+                <div className="flex items-start gap-space-sm px-space-sm py-space-xs bg-surface-container-lowest text-body-sm border-b border-surface-container-low">
+                  <div className="flex-1 min-w-0 font-medium text-on-surface">
+                    <span className="font-mono-data-cell text-on-surface-variant mr-space-2xs">01</span>
                     Commercial Foundation Reinforcement - Phase 3
                     <span className="block font-body-sm text-[0.6875rem] text-on-surface-variant">
                       Site: Sandton Tower Extension Project • Milestone Cert #48
                     </span>
                   </div>
-                  <div className="col-span-2 text-right font-mono-data-cell text-on-surface-variant">1.0 Lump</div>
-                  <div className="col-span-3 text-right font-mono-data-cell font-semibold text-on-surface">
+                  <div className="w-20 text-right shrink-0 font-mono-data-cell text-on-surface-variant">1.0 Lump</div>
+                  <div className="w-32 text-right shrink-0 font-mono-data-cell font-semibold text-on-surface">
                     R 160,869.57
                   </div>
                 </div>
@@ -263,7 +262,7 @@ export default function OcrExtractionReview({ onContinue }) {
                     <span className="font-mono-data-cell text-on-surface">R 24,130.43</span>
                   </div>
                   <div
-                    className="flex justify-between items-center pt-space-xs border-t border-surface-container-high mt-space-2xs relative cursor-pointer"
+                    className="flex flex-wrap justify-between items-center gap-space-2xs pt-space-xs border-t border-surface-container-high mt-space-2xs relative cursor-pointer"
                     onClick={() => highlightField("field-gross")}
                   >
                     <div className="absolute -inset-1.5 bg-primary-container/10 rounded-lg ring-2 ring-primary shadow-md"></div>
@@ -319,7 +318,7 @@ export default function OcrExtractionReview({ onContinue }) {
         </div>
 
         {/* RIGHT: editable structured fields */}
-        <div className="lg:col-span-6 flex flex-col gap-space-sm">
+        <div className="xl:col-span-5 flex flex-col gap-space-sm min-w-0">
           <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex items-center justify-between">
             <div className="flex flex-col">
               <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
@@ -366,7 +365,7 @@ export default function OcrExtractionReview({ onContinue }) {
                   />
                 </div>
                 {f.note && (
-                  <div className="flex items-center justify-between px-space-xs text-body-sm text-on-surface-variant">
+                  <div className="flex flex-wrap items-center justify-between gap-x-space-sm gap-y-space-3xs px-space-xs text-body-sm text-on-surface-variant">
                     <span>{f.note}</span>
                     <span className="text-tertiary font-medium">{f.note2}</span>
                   </div>
@@ -399,14 +398,14 @@ export default function OcrExtractionReview({ onContinue }) {
                   defaultValue="185,000.00"
                 />
               </div>
-              <div className="flex items-center justify-between px-space-xs text-body-sm text-on-surface-variant">
+              <div className="flex flex-wrap items-center justify-between gap-x-space-sm gap-y-space-3xs px-space-xs text-body-sm text-on-surface-variant">
                 <span>Principal: R 160,869.57</span>
                 <span>Output VAT (15%): R 24,130.43</span>
               </div>
             </div>
 
             {/* Dates & terms */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-xs">
               <div className="flex flex-col gap-space-3xs">
                 <label className="font-label-caps text-label-caps text-on-surface-variant uppercase font-bold">
                   Issue Date
