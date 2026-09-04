@@ -1,0 +1,77 @@
+[
+  {
+    "invoiceId": "demo-inv-001",
+    "invoiceNumber": "INV-2024-001",
+    "smeId": "sme-001",
+    "buyerId": "buyer-001",
+    "amount": 150000.00,
+    "currency": "ZAR",
+    "issueDate": "2024-01-15",
+    "dueDate": "2024-02-14",
+    "extractedData": {
+      "vendorName": "Precision Engineering",
+      "vendorAddress": "100 Industrial Area, Johannesburg",
+      "buyerName": "Acme Corporation",
+      "buyerAddress": "123 Tech Park, Johannesburg",
+      "invoiceNumber": "INV-2024-001",
+      "totalAmount": 150000.00,
+      "taxAmount": 21000.00,
+      "subtotal": 129000.00,
+      "lineItems": [
+        { "description": "CNC Machining Services", "quantity": 10, "unitPrice": 8500.00, "amount": 85000.00 },
+        { "description": "Quality Inspection", "quantity": 5, "unitPrice": 4800.00, "amount": 24000.00 },
+        { "description": "Material Costs", "quantity": 1, "unitPrice": 20000.00, "amount": 20000.00 }
+      ]
+    }
+  },
+  {
+    "invoiceId": "demo-inv-002",
+    "invoiceNumber": "INV-2024-002",
+    "smeId": "sme-002",
+    "buyerId": "buyer-002",
+    "amount": 275000.00,
+    "currency": "ZAR",
+    "issueDate": "2024-01-18",
+    "dueDate": "2024-02-17",
+    "extractedData": {
+      "vendorName": "Cape Digital Solutions",
+      "vendorAddress": "200 Tech Hub, Cape Town",
+      "buyerName": "Global Retail Ltd",
+      "buyerAddress": "456 Commerce St, Cape Town",
+      "invoiceNumber": "INV-2024-002",
+      "totalAmount": 275000.00,
+      "taxAmount": 38500.00,
+      "subtotal": 236500.00,
+      "lineItems": [
+        { "description": "E-Commerce Platform Development", "quantity": 1, "unitPrice": 150000.00, "amount": 150000.00 },
+        { "description": "Mobile App Integration", "quantity": 1, "unitPrice": 65000.00, "amount": 65000.00 },
+        { "description": "Training & Support (3 months)", "quantity": 3, "unitPrice": 7166.67, "amount": 21500.00 }
+      ]
+    }
+  },
+  {
+    "invoiceId": "demo-inv-003",
+    "invoiceNumber": "INV-2024-003",
+    "smeId": "sme-001",
+    "buyerId": "buyer-003",
+    "amount": 89500.00,
+    "currency": "ZAR",
+    "issueDate": "2024-01-10",
+    "dueDate": "2024-02-09",
+    "extractedData": {
+      "vendorName": "Precision Engineering",
+      "vendorAddress": "100 Industrial Area, Johannesburg",
+      "buyerName": "Mining Corp SA",
+      "buyerAddress": "789 Mine Road, Pretoria",
+      "invoiceNumber": "INV-2024-003",
+      "totalAmount": 89500.00,
+      "taxAmount": 12530.00,
+      "subtotal": 76970.00,
+      "lineItems": [
+        { "description": "Spare Parts - Conveyor System", "quantity": 2, "unitPrice": 25000.00, "amount": 50000.00 },
+        { "description": "On-site Installation", "quantity": 2, "unitPrice": 8485.00, "amount": 16970.00 },
+        { "description": "Emergency Call-out Fee", "quantity": 1, "unitPrice": 10000.00, "amount": 10000.00 }
+      ]
+    }
+  }
+]

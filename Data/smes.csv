@@ -1,0 +1,6 @@
+SmeId,CompanyName,RegistrationNumber,Industry,YearsInOperation,AnnualRevenue,ContactEmail,ContactPhone,Address,BankAccountNumber,IsVerified,VerificationDate
+sme-001,Precision Engineering,REG-2019-S001,Manufacturing,5,2500000.00,admin@precisioneng.co.za,+27-11-555-1001,100 Industrial Area, Johannesburg,ACC-1234567890,true,2019-06-15
+sme-002,Cape Digital Solutions,REG-2021-S002,Technology,3,1800000.00,hello@capedigital.co.za,+27-21-555-1002,200 Tech Hub, Cape Town,ACC-2345678901,true,2021-03-20
+sme-003,Pretoria Logistics,REG-2020-S003,Transport & Logistics,4,3200000.00,ops@pretlogistics.co.za,+27-12-555-1003,300 Freight Park, Pretoria,ACC-3456789012,true,2020-09-10
+sme-004,Durban Supplies Co,REG-2022-S004,Wholesale,2,950000.00,orders@durbsupplies.co.za,+27-31-555-1004,400 Supply Chain Rd, Durban,ACC-4567890123,true,2022-01-25
+sme-005,Free State Services,REG-2023-S005,Professional Services,1,480000.00,contact@fsservices.co.za,+27-51-555-1005,500 Business Park, Bloemfontein,ACC-5678901234,false,
