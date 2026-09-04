@@ -1,4 +1,4 @@
-# .NET
+# .NET / C#
 bin/
 obj/
 *.user
@@ -15,9 +15,20 @@ project.fragment.lock.json
 .terraform/
 *.tfstate
 *.tfstate.backup
+*.tfstate.*
 *.tfvars
 *.tfplan
-.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terraform build artifacts
+build/*.zip
+build/*.txt
 
 # IDE
 .vs/
@@ -34,11 +45,10 @@ Thumbs.db
 .env
 *.local
 
-tasks
-
-# Build / Deploy
+# Build output
 publish/
-*.zip
 
 # Node (if used for tooling)
 node_modules/
+
+tasks

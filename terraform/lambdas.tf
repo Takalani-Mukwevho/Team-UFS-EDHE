@@ -1,10 +1,10 @@
 locals {
   common_env_vars = {
-    BUCKET_NAME            = aws_s3_bucket.invoice_uploads.bucket
-    TABLE_INVOICES         = aws_dynamodb_table.invoices.name
-    TABLE_BUYERS           = aws_dynamodb_table.buyers.name
-    TABLE_SMES             = aws_dynamodb_table.smes.name
-    TABLE_EXTRACTION_CACHE = aws_dynamodb_table.extraction_cache.name
+    S3_BUCKET_NAME    = aws_s3_bucket.invoice_uploads.bucket
+    INVOICE_TABLE_NAME  = aws_dynamodb_table.invoices.name
+    BUYER_TABLE_NAME    = aws_dynamodb_table.buyers.name
+    SME_TABLE_NAME      = aws_dynamodb_table.smes.name
+    CACHE_TABLE_NAME    = aws_dynamodb_table.extraction_cache.name
   }
 }
 
@@ -12,7 +12,7 @@ locals {
 resource "aws_lambda_function" "extract_invoice" {
   function_name = "absaflow-extract-invoice"
   runtime       = "dotnet8"
-  handler       = "AbsaFlow.Functions::AbsaFlow.Functions.Handlers.ExtractInvoiceHandler::FunctionHandler"
+  handler       = "InvoiceProcessing::InvoiceProcessing.Functions.UploadFunction::FunctionHandler"
   role          = aws_iam_role.lambda_exec_role.arn
   filename      = "${path.module}/build/dummy.zip"
   timeout       = 30
@@ -27,7 +27,7 @@ resource "aws_lambda_function" "extract_invoice" {
 resource "aws_lambda_function" "verify_invoice" {
   function_name = "absaflow-verify-invoice"
   runtime       = "dotnet8"
-  handler       = "AbsaFlow.Functions::AbsaFlow.Functions.Handlers.VerifyInvoiceHandler::FunctionHandler"
+  handler       = "InvoiceProcessing::InvoiceProcessing.Functions.VerifyFunction::FunctionHandler"
   role          = aws_iam_role.lambda_exec_role.arn
   filename      = "${path.module}/build/dummy.zip"
   timeout       = 15
@@ -42,7 +42,7 @@ resource "aws_lambda_function" "verify_invoice" {
 resource "aws_lambda_function" "risk_funding" {
   function_name = "absaflow-risk-funding"
   runtime       = "dotnet8"
-  handler       = "AbsaFlow.Functions::AbsaFlow.Functions.Handlers.RiskFundingHandler::FunctionHandler"
+  handler       = "InvoiceProcessing::InvoiceProcessing.Functions.FundFunction::FunctionHandler"
   role          = aws_iam_role.lambda_exec_role.arn
   filename      = "${path.module}/build/dummy.zip"
   timeout       = 15
@@ -57,7 +57,7 @@ resource "aws_lambda_function" "risk_funding" {
 resource "aws_lambda_function" "demo_orchestrator" {
   function_name = "absaflow-demo-orchestrator"
   runtime       = "dotnet8"
-  handler       = "AbsaFlow.Functions::AbsaFlow.Functions.Handlers.DemoOrchestratorHandler::FunctionHandler"
+  handler       = "InvoiceProcessing::InvoiceProcessing.Functions.DemoFunction::FunctionHandler"
   role          = aws_iam_role.lambda_exec_role.arn
   filename      = "${path.module}/build/dummy.zip"
   timeout       = 60
