@@ -1,9 +1,9 @@
-# Team-UFS-EDHE — AbsaFlow
+# Team-UFS-EDHE — Shifa
 
 EDHE x Absa Hackathon, Track 1: Access to Finance — Invoice to Cash.
 
-**AbsaFlow** is an invoice financing product. An SME that has completed work and is
-waiting 60 days for a large buyer to pay uploads the invoice; AbsaFlow verifies it,
+**Shifa** is an invoice financing product. An SME that has completed work and is
+waiting 60 days for a large buyer to pay uploads the invoice; Shifa verifies it,
 scores how safe it is to advance against, and releases most of the value immediately.
 The bank collects from the buyer on the due date.
 

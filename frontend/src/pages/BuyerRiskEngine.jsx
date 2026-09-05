@@ -1,7 +1,7 @@
-import { useMemo } from "react";
 import Details from "../components/Details";
+import RulesEngine from "../components/RulesEngine";
 import { zar } from "../engine/format";
-import { BANDS, POLICY } from "../engine/policy";
+import { evaluateRules, pricingFor } from "../engine/rules";
 
 export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {} }) {
   if (!activeInvoice || !activeRisk) {
@@ -20,9 +20,9 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
   const b = activeBuyer;
   const sme = smes[inv.smeId];
 
-  const advanceRate = POLICY[risk.band] || 0;
+  const rules = evaluateRules(inv, b, sme);
+  const { advanceRate, feeRate } = pricingFor(risk.band, rules.absa);
   const advanceAmount = Math.round(inv.fields.amount * advanceRate);
-  const feeRate = POLICY.feeRate;
   const fee = Math.round(advanceAmount * feeRate);
   const netToSme = advanceAmount - fee;
   const fraudProb = risk.band === "Low" ? "0.02%" : risk.band === "Medium" ? "12.4%" : "41.0%";
@@ -71,7 +71,7 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
               <span className="font-mono-data-cell text-mono-data-cell font-semibold text-on-surface">Absa Instant Pay (RTC)</span>
             </div>
             <div className="flex items-center justify-between text-body-sm font-body-sm">
-              <span className="text-on-surface-variant">Discount Fee ({(feeRate * 100).toFixed(0)}%):</span>
+              <span className="text-on-surface-variant">Discount Fee ({+(feeRate * 100).toFixed(2)}%):</span>
               <span className="font-mono-data-cell text-mono-data-cell font-semibold text-tertiary">{zar(fee)}</span>
             </div>
             <div className="flex items-center justify-between text-body-sm font-body-sm">
@@ -84,6 +84,9 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
           </div>
         </div>
       </div>
+
+      {/* Rules engine pre-screen */}
+      <RulesEngine result={rules} />
 
       {/* Risk breakdown */}
       <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
