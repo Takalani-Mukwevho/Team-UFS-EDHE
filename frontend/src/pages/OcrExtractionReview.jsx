@@ -7,6 +7,8 @@ export default function OcrExtractionReview({ onContinue, invoices = [], selecte
   const inv = activeInvoice || invoices[selectedIdx] || null;
   const ed = inv?.extractedData || {};
   const lineItems = ed.lineItems || [];
+  const extractionSource = inv?.extractionSource || 'unknown';
+  const aiConfidence = inv?.confidence || {};
 
   function zarFmt(n) {
     return zar(n || 0);
@@ -24,9 +26,17 @@ export default function OcrExtractionReview({ onContinue, invoices = [], selecte
               Select Invoice to Review
             </h2>
           </div>
-          <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
-            {invoices.length} invoice{invoices.length !== 1 ? "s" : ""} in database
-          </span>
+          <div className="flex items-center gap-space-xs">
+            {extractionSource === 'bedrock' && (
+              <span className="inline-flex items-center gap-space-2xs bg-primary/10 text-primary px-space-xs py-space-3xs rounded-full font-label-caps text-label-caps font-bold">
+                <span className="material-symbols-outlined text-[0.75rem]">smart_toy</span>
+                Bedrock AI
+              </span>
+            )}
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
+              {invoices.length} invoice{invoices.length !== 1 ? "s" : ""} in database
+            </span>
+          </div>
         </div>
 
         {invoices.length === 0 ? (
@@ -193,6 +203,40 @@ export default function OcrExtractionReview({ onContinue, invoices = [], selecte
                 </div>
               </div>
             </div>
+
+            {/* AI Confidence Scores */}
+            {Object.keys(aiConfidence).length > 0 && (
+              <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
+                <div className="flex items-center gap-space-xs mb-space-sm">
+                  <h3 className="font-title-sm text-title-sm font-bold text-on-surface">AI Confidence</h3>
+                  {extractionSource === 'bedrock' && (
+                    <span className="inline-flex items-center gap-space-2xs bg-primary/10 text-primary px-space-2xs py-3xs rounded-full font-label-caps text-[10px] font-bold">
+                      <span className="material-symbols-outlined text-[0.625rem]">smart_toy</span>
+                      Bedrock
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-space-2xs">
+                  {Object.entries(aiConfidence).map(([field, score]) => (
+                    <div key={field} className="flex items-center gap-space-sm">
+                      <span className="flex-1 text-body-sm text-on-surface-variant capitalize">{field.replace(/([A-Z])/g, ' $1')}</span>
+                      <div className="w-20 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${score}%`,
+                            backgroundColor: score >= 90 ? 'var(--good)' : score >= 70 ? 'var(--warn)' : 'var(--crit)',
+                          }}
+                        ></div>
+                      </div>
+                      <span className="font-mono-data-cell text-mono-data-cell text-on-surface font-semibold w-12 text-right">
+                        {score.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Verification status */}
             <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">

@@ -14,6 +14,7 @@ import BuyerSection from '../components/BuyerSection.jsx'
 import RiskSection from '../components/RiskSection.jsx'
 import DecisionSection from '../components/DecisionSection.jsx'
 import Settled from '../components/Settled.jsx'
+import AiInsightPanel from '../components/AiInsightPanel.jsx'
 import AuditTrail from '../components/AuditTrail.jsx'
 
 export default function BankingDashboard() {
@@ -135,6 +136,7 @@ export default function BankingDashboard() {
             <Checks c={selected} />
             <BuyerSection c={selected} buyers={buyers} />
             <RiskSection risk={selected.risk} />
+            <AiInsightPanel selected={selected} risk={selected.risk} buyers={buyers} />
             {selected.status === 'decided'
               ? <Settled c={selected} />
               : <DecisionSection c={selected} risk={selected.risk} onDecide={(d) => decide(selected, d)} buyers={buyers} />}

@@ -23,6 +23,10 @@ locals {
     "POST /api/invoices/verify"  = aws_lambda_function.verify_invoice
     "POST /api/invoices/funding" = aws_lambda_function.risk_funding
     "POST /api/demo/run"         = aws_lambda_function.demo_orchestrator
+    "POST /api/ai/extract"       = aws_lambda_function.ai_extract
+    "POST /api/ai/narrative"     = aws_lambda_function.ai_narrative
+    "GET /api/narratives"         = aws_lambda_function.narrative_store
+    "POST /api/narratives"        = aws_lambda_function.narrative_store
   }
 }
 

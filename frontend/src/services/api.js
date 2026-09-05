@@ -139,6 +139,23 @@ export async function runDemo() {
 }
 
 // =============================================================================
+// NARRATIVE ENDPOINTS (DynamoDB persistence)
+// =============================================================================
+
+/** Save a generated narrative to DynamoDB */
+export async function saveNarrative(invoiceId, narrative) {
+  return await apiFetch('/api/narratives', {
+    method: 'POST',
+    body: JSON.stringify({ invoiceId, narrative }),
+  });
+}
+
+/** Get a stored narrative from DynamoDB */
+export async function getNarrative(invoiceId) {
+  return await apiFetch(`/api/narratives?invoiceId=${encodeURIComponent(invoiceId)}`);
+}
+
+// =============================================================================
 // NOTIFICATION ENDPOINTS
 // =============================================================================
 

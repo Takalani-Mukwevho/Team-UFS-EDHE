@@ -53,6 +53,17 @@ resource "aws_dynamodb_table" "smes" {
   }
 }
 
+resource "aws_dynamodb_table" "narratives" {
+  name         = "absaflow-narratives"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "InvoiceId"
+
+  attribute {
+    name = "InvoiceId"
+    type = "S"
+  }
+}
+
 resource "aws_dynamodb_table" "extraction_cache" {
   name         = "absaflow-extraction-cache"
   billing_mode = "PAY_PER_REQUEST"
