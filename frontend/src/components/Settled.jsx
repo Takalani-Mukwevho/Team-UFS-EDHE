@@ -1,5 +1,4 @@
 import Section from './Section.jsx'
-import { ANALYST } from '../data/cases.js'
 import { fmt, fmt2 } from '../engine/format.js'
 
 export default function Settled({ c }) {
@@ -16,7 +15,7 @@ export default function Settled({ c }) {
           </div>
           {d.overridden && <div className="settled-t" style={{ marginTop: 8 }}><strong>Override reason:</strong> {d.reason}</div>}
           <div className="settled-meta">
-            {ANALYST.name} &middot; {d.at} &middot; engine: {d.engineLine.toLowerCase()}
+            Invoice Finance Desk &middot; {d.at} &middot; engine: {d.engineLine.toLowerCase()}
             {d.overridden ? " · OVERRIDDEN" : " · accepted"}
           </div>
         </div>

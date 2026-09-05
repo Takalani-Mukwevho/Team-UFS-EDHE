@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CASES } from '../data/cases.js'
+import { BUYERS } from '../data/buyers.js'
 import { scoreCase, offerFor } from './scoring.js'
 import { POLICY } from './policy.js'
 
@@ -7,13 +8,13 @@ const byInv = (n) => CASES.find((c) => c.fields.invoiceNumber === n)
 
 describe('scoring across the queue', () => {
   it('puts the reliable buyer in the Low band', () => {
-    const r = scoreCase(byInv('INV-1042'))
+    const r = scoreCase(byInv('INV-1042'), BUYERS)
     expect(r.band).toBe('Low')
     expect(r.total).toBeCloseTo(96.3, 1)
   })
 
   it('puts the late-paying buyer in the High band', () => {
-    const r = scoreCase(byInv('INV-2087'))
+    const r = scoreCase(byInv('INV-2087'), BUYERS)
     expect(r.band).toBe('High')
     expect(POLICY[r.band]).toBe(0)
   })
@@ -21,8 +22,8 @@ describe('scoring across the queue', () => {
   it('drops an unverified SME a band', () => {
     const c = byInv('INV-8890')
     expect(c.smeVerified).toBe(false)
-    const asIs = scoreCase(c)
-    const ifVerified = scoreCase({ ...c, smeVerified: true })
+    const asIs = scoreCase(c, BUYERS)
+    const ifVerified = scoreCase({ ...c, smeVerified: true }, BUYERS)
     expect(ifVerified.total).toBeGreaterThan(asIs.total)
     expect(asIs.band).toBe('Medium')
   })
@@ -33,7 +34,7 @@ describe('scoring across the queue', () => {
   it('stops the duplicate at verification, not at scoring', () => {
     const c = CASES.find((x) => x.status === 'blocked')
     expect(c.checksPass).toBe(false)
-    expect(scoreCase(c).band).toBe('Low')
+    expect(scoreCase(c, BUYERS).band).toBe('Low')
     expect(c.status).toBe('blocked')
   })
 })

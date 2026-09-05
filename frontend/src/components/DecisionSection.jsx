@@ -1,12 +1,12 @@
 import { useState, Fragment } from 'react'
 import Section from './Section.jsx'
-import { BUYERS } from '../data/buyers.js'
-import { ANALYST } from '../data/cases.js'
 import { BANDS, POLICY } from '../engine/policy.js'
 import { offerFor } from '../engine/scoring.js'
 import { fmt, fmt2 } from '../engine/format.js'
+import { sendEmailNotification } from '../services/api.js'
 
-export default function DecisionSection({ c, risk, onDecide }) {
+export default function DecisionSection({ c, risk, onDecide, buyers: buyersProp }) {
+  const b = buyersProp && buyersProp[c.buyer];
   const enginePct = POLICY[risk.band];
   const engineApproves = enginePct > 0;
   const engineOffer = offerFor(c.fields.amount, enginePct);
@@ -14,6 +14,7 @@ export default function DecisionSection({ c, risk, onDecide }) {
   const [mode, setMode] = useState("accept");
   const [pct, setPct] = useState(engineApproves ? Math.round(enginePct * 100) : 40);
   const [reason, setReason] = useState("");
+  const [sending, setSending] = useState(false);
 
   const overriding = mode !== "accept";
   const finalPct = mode === "accept" ? enginePct : mode === "decline" ? 0 : pct / 100;
@@ -25,6 +26,49 @@ export default function DecisionSection({ c, risk, onDecide }) {
     : "Decline (score " + risk.total.toFixed(1) + ")";
   const finalLine = finalPct > 0 ? "Approve at " + Math.round(finalPct * 100) + "%" : "Decline";
 
+  async function handleDecide() {
+    setSending(true);
+    try {
+      await sendEmailNotification({
+        subject: `[AbsaFlow] Funding Decision — ${c.fields.invoiceNumber} — ${finalLine}`,
+        message: [
+          `AbsaFlow Invoice Funding — Analyst Decision`,
+          ``,
+          `Invoice: ${c.fields.invoiceNumber}`,
+          `SME Supplier: ${c.sme}`,
+          `Buyer: ${c.buyer}`,
+          `Invoice Amount: ${fmt(c.fields.amount)}`,
+          `Due Date: ${c.fields.dueDate}`,
+          ``,
+          `Engine Recommendation: ${engineLine}`,
+          `Final Decision: ${finalLine}`,
+          `Risk Score: ${risk.total.toFixed(1)} / 100 (${risk.band} band)`,
+          ``,
+          finalPct > 0 ? [
+            `Advance Amount: ${fmt(finalOffer.advance)}`,
+            `Fee (${(POLICY.feeRate * 100).toFixed(0)}%): ${fmt2(finalOffer.fee)}`,
+            `Net to SME: ${fmt2(finalOffer.net)}`,
+          ].join('\n') : `No advance is being made against this invoice.`,
+          ``,
+          overriding ? `Override Reason: ${reason.trim()}` : `Analyst accepted the engine recommendation.`,
+          ``,
+          `AbsaFlow — Invoice Finance Desk`,
+        ].join('\n'),
+        eventType: 'funding-decision',
+      });
+    } catch (err) {
+      console.error('Email notification failed:', err);
+    } finally {
+      setSending(false);
+    }
+
+    onDecide({
+      outcome: finalPct > 0 ? "approved" : "declined",
+      pct: finalPct, offer: finalOffer, reason: reason.trim(),
+      overridden: overriding, engineLine, finalLine,
+    });
+  }
+
   return (
     <Fragment>
       <Section title="Engine recommendation">
@@ -32,13 +76,17 @@ export default function DecisionSection({ c, risk, onDecide }) {
           <div>
             <div className="rec-k">{engineApproves ? "Advance recommended" : "Advance not recommended"}</div>
             <div className="rec-t">
-              {engineApproves
-                ? c.buyer + " settles " + Math.round(BUYERS[c.buyer].onTimeRate * 100) + "% of invoices on time, averaging " +
-                  BUYERS[c.buyer].avgSettlementDays + " days. Score " + risk.total.toFixed(1) + " places this in the " +
-                  risk.band + " band, which carries an " + Math.round(enginePct * 100) + "% advance rate."
-                : c.buyer + " settles only " + Math.round(BUYERS[c.buyer].onTimeRate * 100) + "% of invoices on time, averaging " +
-                  BUYERS[c.buyer].avgSettlementDays + " days against " + c.fields.termsDays +
-                  "-day terms. Score " + risk.total.toFixed(1) + " falls below the " + BANDS.medium + " threshold."}
+              {b ? (
+                engineApproves
+                  ? c.buyer + " settles " + Math.round((b.onTimeRate || 0) * 100) + "% of invoices on time, averaging " +
+                    (b.avgSettlementDays || 0) + " days. Score " + risk.total.toFixed(1) + " places this in the " +
+                    risk.band + " band, which carries an " + Math.round(enginePct * 100) + "% advance rate."
+                  : c.buyer + " settles only " + Math.round((b.onTimeRate || 0) * 100) + "% of invoices on time, averaging " +
+                    (b.avgSettlementDays || 0) + " days against " + c.fields.termsDays +
+                    "-day terms. Score " + risk.total.toFixed(1) + " falls below the " + BANDS.medium + " threshold."
+              ) : (
+                `Score ${risk.total.toFixed(1)} places this in the ${risk.band} band.` + (engineApproves ? ` Advance rate: ${Math.round(enginePct * 100)}%.` : " Advance not recommended.")
+              )}
             </div>
           </div>
           {engineApproves && (
@@ -50,7 +98,7 @@ export default function DecisionSection({ c, risk, onDecide }) {
         </div>
       </Section>
 
-      <Section title="Analyst decision" right={<span className="conf">{ANALYST.name} &middot; {ANALYST.role}</span>}>
+      <Section title="Analyst decision" right={<span className="conf">Invoice Finance Desk</span>}>
         <div className="choices">
           <label className={"choice" + (mode === "accept" ? " on" : "")} onClick={() => setMode("accept")}>
             <span className="radio" />
@@ -109,13 +157,9 @@ export default function DecisionSection({ c, risk, onDecide }) {
         )}
 
         <div className="actions">
-          <button className="btn" disabled={!reasonOk}
-            onClick={() => onDecide({
-              outcome: finalPct > 0 ? "approved" : "declined",
-              pct: finalPct, offer: finalOffer, reason: reason.trim(),
-              overridden: overriding, engineLine, finalLine,
-            })}>
-            Confirm &mdash; {finalLine.toLowerCase()}
+          <button className="btn" disabled={!reasonOk || sending}
+            onClick={handleDecide}>
+            {sending ? "Sending notification..." : `Confirm — ${finalLine.toLowerCase()}`}
           </button>
           {overriding && !reasonOk && <span className="hint">A reason is required before an override can be submitted.</span>}
         </div>

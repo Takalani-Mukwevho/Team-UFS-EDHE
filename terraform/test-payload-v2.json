@@ -1,0 +1,1 @@
+{"version":"2.0","routeKey":"GET /api/invoices","rawPath":"/api/invoices","rawQueryString":"","headers":{},"requestContext":{"http":{"method":"GET","path":"/api/invoices"}},"body":null,"isBase64Encoded":false}

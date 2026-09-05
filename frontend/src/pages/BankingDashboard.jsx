@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, Fragment } from 'react'
-import { CASES, SEED_AUDIT, ANALYST } from '../data/cases.js'
+import { useState, useMemo, useCallback, Fragment, useEffect } from 'react'
 import { scoreCase } from '../engine/scoring.js'
 import { fmt } from '../engine/format.js'
+import { useApiData } from '../services/useApiData.js'
+import { updateInvoiceStatus } from '../services/api.js'
 
 import Masthead from '../components/Masthead.jsx'
 import MetricStrip from '../components/MetricStrip.jsx'
@@ -16,11 +17,20 @@ import Settled from '../components/Settled.jsx'
 import AuditTrail from '../components/AuditTrail.jsx'
 
 export default function BankingDashboard() {
-  const [cases, setCases] = useState(CASES)
+  const { invoices: apiCases, buyers, loading, dataSource } = useApiData()
+  const [cases, setCases] = useState([])
   const [selectedId, setSelectedId] = useState('c1')
-  const [audit, setAudit] = useState(SEED_AUDIT)
+  const [audit, setAudit] = useState([])
 
-  const withRisk = useMemo(() => cases.map((c) => ({ ...c, risk: scoreCase(c) })), [cases])
+  // Initialize cases from API data when available
+  useEffect(() => {
+    if (apiCases.length > 0) {
+      setCases(apiCases)
+      setSelectedId(apiCases[0]?.id || 'c1')
+    }
+  }, [apiCases])
+
+  const withRisk = useMemo(() => cases.map((c) => ({ ...c, risk: scoreCase(c, buyers) })), [cases, buyers])
   const selected = withRisk.find((c) => c.id === selectedId) || withRisk[0]
 
   const counts = {
@@ -36,12 +46,48 @@ export default function BankingDashboard() {
 
   const decide = useCallback((c, d) => {
     const at = new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
-    setCases((prev) => prev.map((x) => (x.id === c.id ? { ...x, status: 'decided', decision: { ...d, at } } : x)))
+    const newDecision = { ...d, at };
+    setCases((prev) => prev.map((x) => (x.id === c.id ? { ...x, status: 'decided', decision: newDecision } : x)))
     setAudit((prev) => [{
-      at: 'Today ' + at, who: ANALYST.name, inv: c.fields.invoiceNumber, sme: c.sme,
+      at: 'Today ' + at, who: 'Invoice Finance Desk', inv: c.fields.invoiceNumber, sme: c.sme,
       engine: d.engineLine, final: d.finalLine, overridden: d.overridden, reason: d.reason,
     }].concat(prev))
+    // Persist decision to DynamoDB so it survives refresh
+    const dynamoStatus = d.outcome === 'approved' ? 'Funded' : 'Rejected';
+    updateInvoiceStatus(c.raw?.invoiceId || c.id, dynamoStatus, newDecision).catch((err) => {
+      console.error('Failed to persist decision:', err);
+    });
   }, [])
+
+  if (loading) {
+    return (
+      <div className="wrap">
+        <Masthead />
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-on-surface-variant">Loading invoice data from API...</p>
+            <p className="text-sm text-on-surface-variant/60">Data source: {dataSource === 'api' ? 'AWS DynamoDB' : 'Mock data'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selected) {
+    return (
+      <div className="wrap">
+        <Masthead />
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <span className="material-symbols-outlined text-[3rem] text-on-surface-variant">inbox</span>
+            <p className="text-on-surface-variant font-semibold">No invoices found</p>
+            <p className="text-sm text-on-surface-variant/60">Data source: {dataSource}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wrap">
@@ -87,11 +133,11 @@ export default function BankingDashboard() {
           <Fragment>
             <ExtractedFields c={selected} />
             <Checks c={selected} />
-            <BuyerSection c={selected} />
+            <BuyerSection c={selected} buyers={buyers} />
             <RiskSection risk={selected.risk} />
             {selected.status === 'decided'
               ? <Settled c={selected} />
-              : <DecisionSection c={selected} risk={selected.risk} onDecide={(d) => decide(selected, d)} />}
+              : <DecisionSection c={selected} risk={selected.risk} onDecide={(d) => decide(selected, d)} buyers={buyers} />}
           </Fragment>
         )}
       </section>
@@ -99,9 +145,9 @@ export default function BankingDashboard() {
       <AuditTrail entries={audit} overrides={overrides} />
 
       <p className="footnote">
-        Hackathon prototype. SMEs, buyers, invoices and settlement histories are fictional. Advance rates, fee rates and
-        risk weights are illustrative and set for the demo; commercial terms in a real deployment would be determined by
-        the bank. The scoring engine here is identical to the one behind the SME-facing app.
+        AbsaFlow prototype. Data loaded from AWS DynamoDB. Advance rates, fee rates and
+        risk weights are determined by the scoring engine. Commercial terms in a real deployment
+        would be set by the bank.
       </p>
     </div>
   )

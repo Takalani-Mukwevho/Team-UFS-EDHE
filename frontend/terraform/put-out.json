@@ -1,0 +1,1 @@
+{"statusCode":404,"headers":{"Content-Type":"application/json","Access-Control-Allow-Origin":"*"},"body":"{\"error\":\"Not found\",\"path\":\"/api/invoices/demo-inv-001/status\"}","isBase64Encoded":false}

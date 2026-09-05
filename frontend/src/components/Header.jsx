@@ -3,7 +3,7 @@ import { NAV_STEPS } from "../data/scenarios";
 // The only navigation in the app. It used to sit at left-64 beside a sidebar
 // that showed the same four stages; the sidebar is gone and the 256px it took
 // now goes to the content.
-export default function Header({ active, onNavigate, onReset }) {
+export default function Header({ active, onNavigate, onReset, liveMode, onToggleLive }) {
   const currentIndex = NAV_STEPS.findIndex((s) => s.key === active);
 
   return (
@@ -51,9 +51,20 @@ export default function Header({ active, onNavigate, onReset }) {
       </nav>
 
       <div className="flex items-center gap-space-sm ml-auto shrink-0">
-        <span className="hidden lg:block font-body-sm text-body-sm text-on-surface-variant">
-          ABC Construction (Pty) Ltd
-        </span>
+        {onToggleLive && (
+          <button
+            type="button"
+            onClick={onToggleLive}
+            className={`flex items-center gap-space-2xs px-space-xs py-space-2xs rounded-lg font-body-sm text-body-sm font-semibold transition-colors ${
+              liveMode
+                ? "bg-tertiary-container text-on-tertiary"
+                : "bg-surface-container text-on-surface-variant"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${liveMode ? "bg-tertiary animate-pulse" : "bg-on-surface-variant/40"}`}></span>
+            <span className="hidden sm:block">{liveMode ? "Live" : "Demo"}</span>
+          </button>
+        )}
         {onReset && (
           <button
             type="button"

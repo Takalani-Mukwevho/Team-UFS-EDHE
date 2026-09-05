@@ -1,0 +1,1 @@
+{"routeKey":"POST /api/invoices/{invoiceId}/status","rawPath":"/api/invoices/demo-inv-002/status","requestContext":{"http":{"method":"POST"}},"body":"{\"status\":\"Funded\",\"decision\":{\"outcome\":\"approved\",\"pct\":0.8}}","isBase64Encoded":false}

@@ -1,0 +1,1 @@
+{"routeKey":"PUT /api/invoices/demo-inv-001/status","rawPath":"/api/invoices/demo-inv-001/status","requestContext":{"http":{"method":"PUT","path":"/api/invoices/demo-inv-001/status"}},"body":"{\"status\":\"Funded\"}"}

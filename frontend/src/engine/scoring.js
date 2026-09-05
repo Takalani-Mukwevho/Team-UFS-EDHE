@@ -1,11 +1,25 @@
-import { BUYERS } from '../data/buyers.js'
+
 import { WEIGHTS, BANDS, POLICY } from './policy.js'
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n))
 
 // Mirrors WeightedRiskEngine.Score(...) in the ASP.NET Core API.
-export function scoreCase(c) {
-  const b = BUYERS[c.buyer]
+// Accept optional buyersMap parameter to use API data instead of static mock data
+export function scoreCase(c, buyersMap) {
+  const b = buyersMap && buyersMap[c.buyer]
+
+  // If buyer not found in either map, return a neutral score
+  if (!b) {
+    const parts = [
+      { key: 'buyer', name: 'Buyer on-time payment rate', raw: 50, w: WEIGHTS.buyer, detail: 'No settlement data available' },
+      { key: 'settlement', name: 'Buyer settlement speed', raw: 50, w: WEIGHTS.settlement, detail: 'No settlement data available' },
+      { key: 'sme', name: 'SME standing', raw: c.smeVerified ? 90 : 40, w: WEIGHTS.sme, detail: c.smeVerified ? 'KYB verified' : 'KYB pending' },
+      { key: 'invoice', name: 'Invoice integrity', raw: c.checksPass ? 100 : 0, w: WEIGHTS.invoice, detail: c.checksPass ? 'all checks passed' : 'validation failed' },
+    ].map((p) => ({ ...p, weighted: p.raw * p.w }))
+    const total = parts.reduce((s, p) => s + p.weighted, 0)
+    const band = total >= BANDS.low ? 'Low' : total >= BANDS.medium ? 'Medium' : 'High'
+    return { parts, total, band }
+  }
 
   const parts = [
     {

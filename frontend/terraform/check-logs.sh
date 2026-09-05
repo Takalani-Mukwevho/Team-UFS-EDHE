@@ -1,0 +1,1 @@
+START=$(($(date +%s)000 - 300000)) && aws logs filter-log-events --log-group-name \"/aws/lambda/absaflow-query-data\" --region af-south-1 --start-time $START --query 'events[-5:].message' --output text 2>&1

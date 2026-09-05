@@ -1,5 +1,3 @@
-import { ANALYST } from '../data/cases.js'
-
 export default function Masthead() {
   return (
     <header className="masthead">
@@ -13,10 +11,10 @@ export default function Masthead() {
         </div>
       </div>
       <div className="analyst">
-        <span className="avatar">{ANALYST.initials}</span>
+        <span className="avatar">IF</span>
         <span>
-          <span className="nm" style={{ display: 'block' }}>{ANALYST.name}</span>
-          <span className="rl">{ANALYST.role}</span>
+          <span className="nm" style={{ display: 'block' }}>Invoice Finance Desk</span>
+          <span className="rl">AbsaFlow System</span>
         </span>
       </div>
     </header>

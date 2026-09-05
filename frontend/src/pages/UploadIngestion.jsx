@@ -1,32 +1,22 @@
 import { useRef, useState } from "react";
-import { SCENARIOS, zar } from "../data/scenarios";
 
-
-export default function UploadIngestion({ onContinue }) {
-  const [scenario, setScenario] = useState("A");
+export default function UploadIngestion({ onContinue, invoices = [] }) {
+  const [filename, setFilename] = useState("invoice-upload.pdf");
   const [progress, setProgress] = useState(100);
-  const [filename, setFilename] = useState(SCENARIOS.A.filename);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
-
-  const data = SCENARIOS[scenario];
-
-  function switchScenario(key) {
-    setScenario(key);
-    setFilename(SCENARIOS[key].filename);
-    setProgress(100);
-  }
 
   function simulateUpload(name) {
     if (!name) return;
     setFilename(name);
+    setUploading(true);
     setProgress(20);
     setTimeout(() => setProgress(65), 300);
-    setTimeout(() => setProgress(100), 800);
+    setTimeout(() => { setProgress(100); setUploading(false); }, 800);
   }
 
   return (
     <div className="w-full max-w-[88rem] mx-auto px-gutter-desktop py-space-lg flex flex-col gap-space-lg">
-      {/* Centered Upload Container */}
       <div className="w-full flex justify-center items-center">
         <section className="w-full max-w-3xl flex flex-col gap-space-md">
           <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm relative overflow-hidden">
@@ -37,6 +27,9 @@ export default function UploadIngestion({ onContinue }) {
                   Invoice &amp; PO Intake Portal
                 </h2>
               </div>
+              <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
+                {invoices.length} invoice{invoices.length !== 1 ? "s" : ""} in database
+              </span>
             </div>
 
             <div
@@ -63,18 +56,9 @@ export default function UploadIngestion({ onContinue }) {
                     onChange={(e) => simulateUpload(e.target.files?.[0]?.name)}
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => switchScenario("A")}
-                  className="px-space-md py-space-xs bg-surface-container-lowest text-on-surface rounded-lg font-body-sm text-body-sm font-semibold hover:bg-surface-container transition-colors shadow-sm flex items-center gap-space-2xs"
-                >
-                  <span className="material-symbols-outlined text-[1rem] text-primary">description</span>
-                  <span>Load Sample Tax Invoice (PDF)</span>
-                </button>
               </div>
             </div>
 
-            {/* Active file indicator */}
             <div className="mt-space-md p-space-sm rounded-lg bg-surface-container-low flex items-center justify-between flex-wrap gap-space-xs">
               <div className="flex items-center gap-space-sm">
                 <div className="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary font-mono-data-cell font-bold shadow-sm">
@@ -82,31 +66,35 @@ export default function UploadIngestion({ onContinue }) {
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="font-body-sm text-body-sm font-bold text-on-surface">{filename}</span>
-                  <span className="font-mono-data-cell text-mono-data-cell text-secondary">3.4 MB</span>
+                  <span className="font-mono-data-cell text-mono-data-cell text-secondary">
+                    {uploading ? "Uploading..." : "Ready"}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-space-xs">
                 <span className="font-label-caps text-label-caps uppercase text-tertiary bg-surface-container-lowest px-space-xs py-space-3xs rounded-full font-bold">
-                  ✓ Validated Hash
+                  {uploading ? "Uploading" : "Validated"}
                 </span>
-                <button type="button" className="p-space-3xs text-secondary hover:text-on-surface rounded">
-                  <span className="material-symbols-outlined text-[1.25rem]">visibility</span>
-                </button>
               </div>
             </div>
+
+            {uploading && (
+              <div className="mt-space-xs h-1.5 bg-surface-container rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
           </div>
 
           <button
             type="button"
-            onClick={() => onContinue?.(scenario)}
-            disabled={data.blocked}
-            className={`w-full flex items-center justify-center gap-space-xs px-space-lg py-space-xs rounded-lg font-body-lg text-body-lg font-bold shadow-sm transition-all ${data.blocked
-                ? "bg-surface-container text-on-surface-variant cursor-not-allowed"
-                : "bg-primary-container hover:bg-primary text-on-primary hover:shadow-md"
-              }`}
+            onClick={() => onContinue?.()}
+            className="w-full flex items-center justify-center gap-space-xs px-space-lg py-space-xs rounded-lg font-body-lg text-body-lg font-bold shadow-sm transition-all bg-primary-container hover:bg-primary text-on-primary hover:shadow-md"
           >
-            <span>{data.blocked ? "Blocked — Cannot Continue" : "Continue to OCR Review"}</span>
-            {!data.blocked && <span className="material-symbols-outlined text-[1.25rem]">arrow_forward</span>}
+            <span>Continue to OCR Review</span>
+            <span className="material-symbols-outlined text-[1.25rem]">arrow_forward</span>
           </button>
         </section>
       </div>

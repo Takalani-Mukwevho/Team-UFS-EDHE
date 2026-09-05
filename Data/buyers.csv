@@ -1,6 +1,6 @@
 BuyerId,CompanyName,RegistrationNumber,Industry,ContactEmail,ContactPhone,Address,CreditRating,TotalInvoicesPaid,TotalInvoicesOutstanding,AveragePaymentDays,LatePayments,TotalAmountPaid,IsActive
-buyer-001,Acme Corporation,REG-2018-001,Technology,finance@acmecorp.co.za,+27-11-555-0101,123 Tech Park, Johannesburg,Excellent,45,3,32,1,1250000.00,true
-buyer-002,Global Retail Ltd,REG-2019-002,Retail,accounts@globalretail.co.za,+27-21-555-0202,456 Commerce St, Cape Town,Good,32,5,45,3,875000.00,true
-buyer-003,Mining Corp SA,REG-2017-003,Mining,mining.payments@miningcorp.co.za,+27-12-555-0303,789 Mine Road, Pretoria,Standard,28,8,52,6,2100000.00,true
-buyer-004,Fresh Foods Pty,REG-2020-004,Food & Beverage,ap@freshfoods.co.za,+27-31-555-0404,321 Agriculture Blvd, Durban,BelowAverage,15,12,68,9,425000.00,true
-buyer-005,BuildRight Construction,REG-2016-005,Construction,accounts@buildright.co.za,+27-18-555-0505,555 Builder Lane, Bloemfontein,Poor,8,15,85,12,180000.00,true
+buyer-001,Acme Corporation,REG-2018-001,Technology,finance@acmecorp.co.za,+27-11-555-0101,"123 Tech Park, Johannesburg",Excellent,45,3,32,1,1250000.00,true
+buyer-002,Global Retail Ltd,REG-2019-002,Retail,accounts@globalretail.co.za,+27-21-555-0202,"456 Commerce St, Cape Town",Good,32,5,45,3,875000.00,true
+buyer-003,Mining Corp SA,REG-2017-003,Mining,mining.payments@miningcorp.co.za,+27-12-555-0303,"789 Mine Road, Pretoria",Standard,28,8,52,6,2100000.00,true
+buyer-004,Fresh Foods Pty,REG-2020-004,Food & Beverage,ap@freshfoods.co.za,+27-31-555-0404,"321 Agriculture Blvd, Durban",BelowAverage,15,12,68,9,425000.00,true
+buyer-005,BuildRight Construction,REG-2016-005,Construction,accounts@buildright.co.za,+27-18-555-0505,"555 Builder Lane, Bloemfontein",Poor,8,15,85,12,180000.00,true
