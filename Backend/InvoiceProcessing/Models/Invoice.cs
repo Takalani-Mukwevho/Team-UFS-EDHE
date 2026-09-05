@@ -43,6 +43,9 @@ public class Invoice
     [JsonPropertyName("fundingDecision")]
     public FundingDecision? FundingDecision { get; set; }
 
+    [JsonPropertyName("disbursement")]
+    public Disbursement? Disbursement { get; set; }
+
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
