@@ -9,6 +9,7 @@ import {
   transformInvoiceForUI,
   transformBuyerForUI,
 } from './api.js';
+import { applyLedgerOverlay } from './ledgerBridge.js';
 
 /**
  * Hook to fetch and manage all dashboard data from the API.
@@ -61,14 +62,14 @@ export function useApiData({ useMockFallback = true, autoFetch = true } = {}) {
         return transformInvoiceForUI(inv, buyer, sme);
       }).filter(Boolean);
 
-      setInvoices(transformedInvoices.length > 0 ? transformedInvoices : getMockInvoices());
+      setInvoices(applyLedgerOverlay(transformedInvoices.length > 0 ? transformedInvoices : getMockInvoices()));
       setBuyers(Object.keys(buyersMap).length > 0 ? buyersMap : getMockBuyers());
       setSmes(Object.keys(smesMap).length > 0 ? smesMap : getMockSmes());
       setDataSource(transformedInvoices.length > 0 ? 'api' : 'mock');
     } catch (err) {
       console.warn('API fetch failed, using mock data:', err.message);
       if (useMockFallback) {
-        setInvoices(getMockInvoices());
+        setInvoices(applyLedgerOverlay(getMockInvoices()));
         setBuyers(getMockBuyers());
         setSmes(getMockSmes());
         setDataSource('mock');

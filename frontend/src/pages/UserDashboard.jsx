@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Header from "../components/Header";
 import UploadIngestion from "./UploadIngestion";
 import OcrExtractionReview from "./OcrExtractionReview";
@@ -24,7 +24,7 @@ export default function UserDashboard() {
   const [extraBuyers, setExtraBuyers] = useState({});
   const [extraSmes, setExtraSmes] = useState({});
 
-  const { invoices, buyers, smes, loading, dataSource } = useApiData({ useMockFallback: !liveMode });
+  const { invoices, buyers, smes, loading, dataSource, refetch } = useApiData({ useMockFallback: !liveMode });
 
   // Merge extra buyers and smes from uploads
   const mergedBuyers = useMemo(() => ({
@@ -48,6 +48,16 @@ export default function UserDashboard() {
 
   // The selected invoice
   const activeInvoice = combinedInvoices[selectedInvoiceIdx] || combinedInvoices[0] || null;
+
+  // While the funding offer tab is open, keep the SME side in step with the
+  // credit desk: re-read the shared ledger on entry and then every few seconds
+  // so an acceptance (or decline) shows up automatically.
+  useEffect(() => {
+    if (activeTab !== "funding") return;
+    refetch();
+    const id = setInterval(() => refetch(), 8000);
+    return () => clearInterval(id);
+  }, [activeTab, refetch]);
 
   // Compute risk for the active invoice
   const activeRisk = useMemo(() => {
@@ -110,6 +120,8 @@ export default function UserDashboard() {
           smes={mergedSmes}
           loading={loading}
           dataSource={dataSource}
+          onRefresh={refetch}
+          refreshing={loading}
         />
       </main>
     </div>

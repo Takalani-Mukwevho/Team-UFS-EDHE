@@ -2,17 +2,20 @@
 // Coordinates the real AWS pipeline:
 // 1. AWS S3 Intake & Extraction: POST /api/invoices/extract (Uploads PDF bytes to S3, parses document, saves to DynamoDB)
 // 2. AWS Verification: POST /api/invoices/verify (Runs verification policy in Lambda, updates DynamoDB)
-// 3. AWS Risk & Funding: POST /api/invoices/funding (Evaluates credit risk & funding offer in Lambda, updates DynamoDB)
+// 3. Risk engine: prepares a funding recommendation for the credit desk
+//    (the invoice is deliberately NOT auto-funded — the desk must accept the
+//    recommendation before any disbursement)
 // 4. AWS State Refresh: GET /api/invoices (Fetches latest ledger from DynamoDB)
 
-import { uploadInvoice, verifyInvoice, evaluateFunding, getInvoices, transformInvoiceForUI } from './api';
+import { uploadInvoice, verifyInvoice, getInvoices } from './api';
+import { invoiceFlags } from '../engine/decision';
 import { extractInvoiceFromPdf } from './pdfExtractor';
 
 export const PIPELINE_STAGES = [
   { id: 's3_upload', label: 'AWS S3 Document Intake', icon: 'cloud_upload' },
   { id: 'extract', label: 'AWS Lambda AI Extraction', icon: 'document_scanner' },
   { id: 'verify', label: 'AWS Policy Verification', icon: 'verified' },
-  { id: 'risk_funding', label: 'AWS Risk Engine & Funding', icon: 'query_stats' },
+  { id: 'risk_funding', label: 'AWS Risk Engine & Recommendation', icon: 'query_stats' },
   { id: 'dynamo_sync', label: 'AWS DynamoDB Ledger Synced', icon: 'database' },
 ];
 
@@ -134,34 +137,25 @@ export async function runInvoicePipeline(file, {
   }
 
   // ---------------------------------------------------------------------------
-  // STAGE 4: Call AWS Lambda Risk Engine & Funding Decision
+  // STAGE 4: Risk engine prepares a funding recommendation.
+  // The invoice is intentionally NOT marked 'Funded' here: disbursement may only
+  // happen after the credit desk accepts the recommendation on the bank console,
+  // so the invoice stays in the desk queue (ledger status 'Verified').
   // ---------------------------------------------------------------------------
   onProgress(3, {
     status: 'running',
-    message: `Invoking absaflow-risk-funding Lambda for ${invoiceId}...`,
+    message: `Running risk & funding recommendation for ${invoiceId}...`,
   });
 
-  let awsFundingResult = null;
-  try {
-    awsFundingResult = await evaluateFunding(invoiceId);
-    const fd = awsFundingResult.fundingDecision || {};
-    const approvedAmt = fd.approvedAmount || 0;
-    const rate = fd.fundingRate || 0.85;
+  const totalAmount = awsExtractResult?.extraction?.totalAmount || clientExtracted?.totalAmount || 0;
+  const recommendedRate = 0.85;
+  const recommendedAmount = totalAmount * recommendedRate;
 
-    onProgress(3, {
-      status: 'complete',
-      message: `AWS Funding Decision: ${awsFundingResult.status || 'Funded'} (${Math.round(rate * 100)}% Advance)`,
-      details: `Pre-approved capital: R ${approvedAmt.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`,
-    });
-  } catch (err) {
-    console.warn('AWS funding call note:', err.message);
-    const amt = clientExtracted?.totalAmount || 150000;
-    onProgress(3, {
-      status: 'complete',
-      message: `Pre-Approved: 85% Advance Facility`,
-      details: `Pre-approved: R ${(amt * 0.85).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`,
-    });
-  }
+  onProgress(3, {
+    status: 'complete',
+    message: `Recommendation ready: ${Math.round(recommendedRate * 100)}% advance facility`,
+    details: `Awaiting credit desk approval • Indicative advance: R ${recommendedAmount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`,
+  });
 
   // ---------------------------------------------------------------------------
   // STAGE 5: Sync with DynamoDB State
@@ -185,21 +179,13 @@ export async function runInvoicePipeline(file, {
   onProgress(4, {
     status: 'complete',
     message: `AWS Pipeline Complete: Invoice ${invoiceId} is live in DynamoDB`,
-    details: 'Status: Funded • Ready for disbursement & analytics review',
+    details: 'Status: Verified • Ready for credit desk approval',
   });
 
   // Construct UI-compatible invoice object
   const extraction = awsExtractResult?.extraction || clientExtracted || {};
-  const fundingDecision = awsFundingResult?.fundingDecision || liveInv?.fundingDecision || {
-    decision: 0,
-    outcome: 'Approved',
-    approvedAmount: (extraction.totalAmount || 0) * 0.85,
-    fundingRate: 0.85,
-    riskScore: { overall: 0.88, buyerRisk: 0.2, smeRisk: 0.15, invoiceRisk: 0.1 },
-  };
 
-  const totalAmount = extraction.totalAmount || clientExtracted?.totalAmount || 0;
-  const advanceAmount = fundingDecision.approvedAmount || totalAmount * (fundingDecision.fundingRate || 0.85);
+  const advanceAmount = totalAmount * recommendedRate;
   const feeRate = 0.02;
   const fee = advanceAmount * feeRate;
   const netToSme = advanceAmount - fee;
@@ -214,7 +200,8 @@ export async function runInvoicePipeline(file, {
     smeId: clientExtracted?.smeId || 'sme-001',
     buyer: buyerName,
     buyerId: clientExtracted?.buyerId || 'buyer-001',
-    status: 'decided',
+    // Awaiting the credit desk decision — disbursal is gated on it.
+    status: 'awaiting',
     submitted: new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }),
     fields: {
       invoiceNumber: invoiceId,
@@ -235,16 +222,20 @@ export async function runInvoicePipeline(file, {
     },
     checksPass: true,
     extractedData: extraction,
-    fundingDecision: fundingDecision,
     raw: liveInv || {
       invoiceId: invoiceId,
       invoiceNumber: invoiceId,
       amount: totalAmount,
       smeId: clientExtracted?.smeId || 'sme-001',
       buyerId: clientExtracted?.buyerId || 'buyer-001',
-      status: 'Funded',
+      status: 'Verified',
     },
   };
+
+  // Carry any recorded payout on the invoice and stamp decision flags onto it
+  // so every screen can check approved/pending/disbursed in one place.
+  uiInvoice.disbursement = (liveInv && liveInv.disbursement) || null;
+  uiInvoice.flags = invoiceFlags(uiInvoice);
 
   const buyerProfile = clientExtracted?.buyerProfile || {
     buyerId: 'buyer-001',
@@ -266,13 +257,13 @@ export async function runInvoicePipeline(file, {
     buyer: { ...buyerProfile, key: buyerName },
     sme: smeProfile,
     offer: {
-      advanceRate: fundingDecision.fundingRate || 0.85,
+      advanceRate: recommendedRate,
       advanceAmount,
       feeRate,
       fee,
       netToSme,
       clearingProtocol: 'Absa Instant Pay (RTC)',
-      status: 'Pre-Approved',
+      status: 'Pending credit desk approval',
     },
     risk: {
       total: 88.5,

@@ -26,8 +26,8 @@ export default function AuditTrail({ entries, overrides }) {
                 {a.reason ? ' — ' + a.reason : ''}
               </span>
             </span>
-            <span className={'pill ' + (a.overridden ? 'p-med' : 'p-neutral')}>
-              {a.overridden ? 'Override' : 'Accepted'}
+            <span className={'pill ' + (a.overridden ? 'p-med' : a.kind === 'disbursement' ? 'p-low' : 'p-neutral')}>
+              {a.kind === 'disbursement' ? 'Paid' : a.overridden ? 'Override' : 'Accepted'}
             </span>
           </div>
         ))

@@ -75,3 +75,24 @@ public enum Decision
     ConditionalApproval,
     Rejected
 }
+
+// Recorded when the SME accepts the advance and the funds are paid out.
+// This is separate from the desk decision: an invoice can be approved by the
+// credit desk but not yet disbursed until the SME accepts the offer.
+public class Disbursement
+{
+    [JsonPropertyName("advance")]
+    public decimal Advance { get; set; }
+
+    [JsonPropertyName("fee")]
+    public decimal Fee { get; set; }
+
+    [JsonPropertyName("net")]
+    public decimal Net { get; set; }
+
+    [JsonPropertyName("fundingRate")]
+    public decimal FundingRate { get; set; }
+
+    [JsonPropertyName("acceptedAt")]
+    public DateTime AcceptedAt { get; set; } = DateTime.UtcNow;
+}
