@@ -1,4 +1,4 @@
-// Pipeline Automation Orchestrator for AbsaFlow
+// Pipeline Automation Orchestrator for Shifa
 // Coordinates the real AWS pipeline:
 // 1. AWS S3 Intake & Extraction: POST /api/invoices/extract (Uploads PDF bytes to S3, parses document, saves to DynamoDB)
 // 2. AWS Verification: POST /api/invoices/verify (Runs verification policy in Lambda, updates DynamoDB)

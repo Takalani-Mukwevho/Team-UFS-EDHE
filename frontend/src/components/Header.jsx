@@ -10,10 +10,10 @@ export default function Header({ active, onNavigate, onReset, liveMode, onToggle
     <header className="fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center gap-space-md px-space-md">
       <div className="flex items-center gap-space-xs shrink-0">
         <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-title-sm text-title-sm font-bold">
-          A
+          S
         </div>
         <span className="font-title-sm text-title-sm text-on-surface font-bold tracking-tight hidden sm:block">
-          AbsaFlow
+          Shifa
         </span>
       </div>
 

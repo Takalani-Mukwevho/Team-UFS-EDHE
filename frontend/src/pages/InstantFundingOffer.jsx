@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { zar } from "../engine/format";
-import { POLICY } from "../engine/policy";
+
 import { deskDecisionState, disbursementOf } from "../engine/decision";
 import { sendEmailNotification, updateInvoiceStatus } from "../services/api";
 import { recordSmeAcceptance } from "../services/ledgerBridge";
 
-const FEE_RATE = POLICY.feeRate;
+import { POLICY, ABSA, RULES } from "../engine/policy";
+import { evaluateRules, pricingFor, APPROVE, DECLINE } from "../engine/rules";
+
+
 const MIN_ADVANCE_PCT = 0.3;
 
 export default function InstantFundingOffer({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {}, onRefresh, refreshing = false }) {
@@ -26,8 +29,12 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
   // Paid out once the SME has accepted — either recorded this session or read
   // back from the shared ledger/overlay (so it survives a refresh).
   const paidOut = !!disbursementOf(inv);
+  const rules = evaluateRules(inv, activeBuyer, smes[inv.smeId]);
+  const pricing = pricingFor(risk?.band, rules.absa);
+  const absaApplied = rules.absa.qualifies && pricing.advanceRate > 0;
   const GROSS_VALUE = inv.fields.amount;
-  const advanceRate = risk ? (POLICY[risk.band] || 0) : 0.5;
+  const advanceRate = risk ? pricing.advanceRate : 0.5;
+  const FEE_RATE = risk ? pricing.feeRate : POLICY.feeRate;
   const ADVANCE_CAP = Math.round(GROSS_VALUE * advanceRate);
   const MIN_ADVANCE = Math.round(GROSS_VALUE * MIN_ADVANCE_PCT);
   const buyerName = inv.buyer;
@@ -40,7 +47,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
 
   const paidNow = disbursed || paidOut;
 
-  const fee = useMemo(() => advance * FEE_RATE, [advance]);
+  const fee = useMemo(() => advance * FEE_RATE, [advance, FEE_RATE]);
   const net = useMemo(() => advance - fee, [advance, fee]);
   const rebate = useMemo(() => GROSS_VALUE - net, [net]);
   const pct = useMemo(() => ADVANCE_CAP > 0 ? Math.round((advance / ADVANCE_CAP) * 100) : 0, [advance, ADVANCE_CAP]);
@@ -65,22 +72,22 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
       recordSmeAcceptance(invoiceId, disbursement);
 
       await sendEmailNotification({
-        subject: `[AbsaFlow] Disbursement Approved — ${invoiceNumber}`,
+        subject: `[Shifa] Disbursement Approved — ${invoiceNumber}`,
         message: [
-          `AbsaFlow Invoice Funding — Disbursement Confirmation`,
+          `Shifa Invoice Funding — Disbursement Confirmation`,
           ``,
           `Invoice: ${invoiceNumber}`,
           `SME Supplier: ${inv.sme}`,
           `Buyer (Debtor): ${buyerName}`,
           `Gross Invoice Value: ${zar(GROSS_VALUE)}`,
           `Advance Amount: ${zar(advance)}`,
-          `Fee (${(FEE_RATE * 100).toFixed(0)}%): ${zar(fee)}`,
+          `Fee (${+(FEE_RATE * 100).toFixed(2)}%): ${zar(fee)}`,
           `Net Disbursement to SME: ${zar(net)}`,
           ``,
           `The advance has been processed and will be transferred to the SME\'s Absa commercial account within 2 hours.`,
           `The buyer (${buyerName}) will be contacted for settlement on ${inv.fields.dueDate}.`,
           ``,
-          `AbsaFlow — Instant Invoice Funding`,
+          `Shifa — Instant Invoice Funding`,
         ].join('\n'),
         eventType: 'disbursement',
       });
@@ -106,6 +113,29 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
           {/* LEFT */}
           <div className="lg:col-span-8 flex flex-col gap-space-lg">
+            {/* Absa relationship benefit */}
+            {absaApplied && (
+              <div className="bg-tertiary-container/20 rounded-xl p-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+                <div className="flex items-center gap-space-sm">
+                  <span className="material-symbols-outlined text-tertiary text-[1.5rem]">workspace_premium</span>
+                  <div className="flex flex-col">
+                    <span className="font-title-sm text-title-sm font-semibold text-on-surface">Absa customer pricing applied</span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant">
+                      {rules.absa.months} months of banking history, past the {RULES.absaMinMonths}-month threshold.
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-space-xs shrink-0">
+                  <span className="px-space-sm py-space-3xs rounded-full bg-surface-container-lowest font-mono-data-cell text-mono-data-cell text-tertiary font-semibold">
+                    {Math.round(pricing.baseRate * 100)}% → {Math.round(pricing.advanceRate * 100)}% advance
+                  </span>
+                  <span className="px-space-sm py-space-3xs rounded-full bg-surface-container-lowest font-mono-data-cell text-mono-data-cell text-tertiary font-semibold">
+                    fee −{+(ABSA.feeDiscount * 100).toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* 4-box metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
               <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
@@ -130,19 +160,24 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(ADVANCE_CAP)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Risk band: {risk?.band || "N/A"}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">
+                    Risk band: {risk?.band || "N/A"}
+                    {absaApplied && <span className="text-tertiary"> · +{Math.round(ABSA.advanceUplift * 100)}% Absa uplift</span>}
+                  </span>
                 </div>
               </div>
 
               <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-outline-variant"></div>
                 <div className="flex items-center justify-between text-on-surface-variant mb-space-sm">
-                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Discount Fee ({(FEE_RATE * 100).toFixed(0)}%)</span>
+                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Discount Fee ({+(FEE_RATE * 100).toFixed(2)}%)</span>
                   <span className="material-symbols-outlined text-[1.125rem]">percent</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(fee)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Fixed financing charge</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">
+                    {absaApplied ? `Discounted from ${+(POLICY.feeRate * 100).toFixed(2)}% standard rate` : "Fixed financing charge"}
+                  </span>
                 </div>
               </div>
 
@@ -228,7 +263,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                   </div>
                   <span className="font-body-md text-body-md font-semibold text-on-surface mb-space-3xs">Debtor Remittance</span>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    {buyerName} deposits <strong className="text-on-surface font-mono-data-cell">{zar(GROSS_VALUE)}</strong> into the AbsaFlow Escrow account.
+                    {buyerName} deposits <strong className="text-on-surface font-mono-data-cell">{zar(GROSS_VALUE)}</strong> into the Shifa Escrow account.
                   </p>
                 </div>
                 <div className="flex flex-col p-space-md rounded-lg bg-surface-container-low">
@@ -252,44 +287,47 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                 <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">
                   {paidNow ? "Advance Disbursed" : creditApproved ? "Ready for Disbursal" : deskState === "declined" ? "Not Approved" : "Credit Desk Review"}
                 </span>
-                <span className={`flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell font-bold ${
-                  paidNow ? "text-tertiary" : creditApproved ? "text-tertiary" : deskState === "declined" ? "text-error" : "text-primary"
-                }`}>
-                  <span className={`w-2 h-2 rounded-full animate-pulse ${
-                    paidNow ? "bg-tertiary" : creditApproved ? "bg-tertiary" : deskState === "declined" ? "bg-error" : "bg-primary"
+                <span className={`flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell font-bold ${paidNow ? "text-tertiary" : creditApproved ? "text-tertiary" : deskState === "declined" ? "text-error" : "text-primary"
                   }`}></span>
-                  {paidNow ? "PAID TO SME" : creditApproved ? "SYSTEM READY" : deskState === "declined" ? "DECLINED" : "PENDING REVIEW"}
+                <span className={`w-2 h-2 rounded-full animate-pulse ${paidNow ? "bg-tertiary" : creditApproved ? "bg-tertiary" : deskState === "declined" ? "bg-error" : "bg-primary"
+                  }`}></span>
+                {paidNow ? "PAID TO SME" : creditApproved ? "SYSTEM READY" : deskState === "declined" ? "DECLINED" : "PENDING REVIEW"}
+                <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Ready for Disbursal</span>
+                <span className={`flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell font-bold ${rules.outcome === APPROVE ? "text-tertiary" : rules.outcome === DECLINE ? "text-error" : "text-on-surface"}`}>
+                  <span className={`w-2 h-2 rounded-full ${rules.outcome === APPROVE ? "bg-tertiary animate-pulse" : rules.outcome === DECLINE ? "bg-error" : "bg-on-surface-variant"}`}></span>
+                  {rules.outcome.toUpperCase()}
                 </span>
               </div>
-              {!creditApproved && (
-                <div className={`rounded-lg p-space-sm flex flex-col gap-space-xs font-body-sm text-body-sm ${
-                  deskState === "declined"
+              {
+                !creditApproved && (
+                  <div className={`rounded-lg p-space-sm flex flex-col gap-space-xs font-body-sm text-body-sm ${deskState === "declined"
                     ? "bg-error-container/60 text-on-error-container"
                     : "bg-primary/5 text-on-surface-variant"
-                }`}>
-                  {deskState === "declined" ? (
-                    <span>The credit desk did not approve an advance against {invoiceNumber}. No disbursement can be made for this invoice.</span>
-                  ) : (
-                    <>
-                      <span>
-                        The funding recommendation for {invoiceNumber} is with the AbsaFlow credit desk. Once the desk
-                        accepts it, the advance unlocks automatically on this page (status refreshes every few seconds).
-                      </span>
-                      {onRefresh && (
-                        <button
-                          type="button"
-                          onClick={onRefresh}
-                          disabled={refreshing}
-                          className="self-start inline-flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg bg-primary-container text-on-primary font-body-sm text-body-sm font-semibold transition-all hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="material-symbols-outlined text-[1rem]">{refreshing ? "sync" : "refresh"}</span>
-                          <span>{refreshing ? "Checking..." : "Check approval status"}</span>
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+                    }`}>
+                    {deskState === "declined" ? (
+                      <span>The credit desk did not approve an advance against {invoiceNumber}. No disbursement can be made for this invoice.</span>
+                    ) : (
+                      <>
+                        <span>
+                          The funding recommendation for {invoiceNumber} is with the AbsaFlow credit desk. Once the desk
+                          accepts it, the advance unlocks automatically on this page (status refreshes every few seconds).
+                        </span>
+                        {onRefresh && (
+                          <button
+                            type="button"
+                            onClick={onRefresh}
+                            disabled={refreshing}
+                            className="self-start inline-flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg bg-primary-container text-on-primary font-body-sm text-body-sm font-semibold transition-all hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="material-symbols-outlined text-[1rem]">{refreshing ? "sync" : "refresh"}</span>
+                            <span>{refreshing ? "Checking..." : "Check approval status"}</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )
+              }
               <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs">
                 <div className="flex justify-between items-center text-body-sm font-body-sm">
                   <span className="text-on-surface-variant">SME Supplier:</span>
@@ -340,7 +378,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                   I agree to the <a className="text-primary underline" href="#">Absa Receivables Purchase Agreement</a> and authorise collection from {buyerName} on the due date.
                 </label>
               </div>
-            </div>
+            </div >
             <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm">
               <span className="font-title-sm text-title-sm font-semibold text-on-surface">Working Capital Impact</span>
               <div className="flex items-center justify-between text-body-sm font-body-sm">
@@ -351,12 +389,12 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                 <div className="h-full bg-tertiary-container rounded-full" style={{ width: `${pct}%` }}></div>
               </div>
               <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant">
-                Historical: {inv.fields.termsDays}-day wait → AbsaFlow: 2 hours
+                Historical: {inv.fields.termsDays}-day wait → Shifa: 2 hours
               </span>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </div >
+        </div >
+      </div >
+    </div >
   );
 }
