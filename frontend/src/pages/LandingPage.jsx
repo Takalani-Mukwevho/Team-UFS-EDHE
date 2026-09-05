@@ -78,7 +78,7 @@ export default function LandingPage() {
         </div>
 
         <h1 className="font-display-xl text-display-xl font-bold tracking-tight text-on-surface mb-space-md text-center leading-tight">
-          Invoice financing,<br />in seconds.
+          Invoice financing,<br />in under 2 hours.
         </h1>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto mb-space-lg text-center leading-relaxed">
           Upload an invoice. Get AI-powered risk analysis. Access your cash today
