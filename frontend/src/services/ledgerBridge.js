@@ -44,6 +44,16 @@ export function recordSmeAcceptance(invoiceId, disbursement) {
   writeOverlay(overlay);
 }
 
+// Clear every recorded acceptance/flag in the overlay so invoices fall back to
+// their default unconfirmed (pending) states on both screens.
+export function clearLedgerOverlay() {
+  try {
+    localStorage.removeItem(OVERLAY_KEY);
+  } catch {
+    // localStorage unavailable — nothing to clear
+  }
+}
+
 function aliasKeysOf(inv) {
   if (!inv) return [];
   return [inv.id, inv.raw?.invoiceId, inv.raw?.invoiceNumber, inv.fields?.invoiceNumber]
