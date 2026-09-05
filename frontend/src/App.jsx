@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import UserDashboard from './pages/UserDashboard';
 import BankingDashboard from './pages/BankingDashboard';
 import NotFoundPage from './pages/NotFound';
@@ -13,7 +14,7 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-surface">
         <Routes>
-          <Route path="/" element={<Navigate to="/user" replace />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/user" element={<UserDashboard />} />
           <Route path="/admin-dashboard" element={<BankingDashboard />} />
           <Route path="*" element={<NotFoundPage />} />
