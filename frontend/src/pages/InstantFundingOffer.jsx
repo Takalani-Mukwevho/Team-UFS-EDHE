@@ -43,9 +43,9 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
     setSending(true);
     try {
       await sendEmailNotification({
-        subject: `[AbsaFlow] Disbursement Approved — ${invoiceNumber}`,
+        subject: `[Shifa] Disbursement Approved — ${invoiceNumber}`,
         message: [
-          `AbsaFlow Invoice Funding — Disbursement Confirmation`,
+          `Shifa Invoice Funding — Disbursement Confirmation`,
           ``,
           `Invoice: ${invoiceNumber}`,
           `SME Supplier: ${inv.sme}`,
@@ -58,7 +58,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
           `The advance has been processed and will be transferred to the SME\'s Absa commercial account within 2 hours.`,
           `The buyer (${buyerName}) will be contacted for settlement on ${inv.fields.dueDate}.`,
           ``,
-          `AbsaFlow — Instant Invoice Funding`,
+          `Shifa — Instant Invoice Funding`,
         ].join('\n'),
         eventType: 'disbursement',
       });
@@ -234,7 +234,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                   </div>
                   <span className="font-body-md text-body-md font-semibold text-on-surface mb-space-3xs">Debtor Remittance</span>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    {buyerName} deposits <strong className="text-on-surface font-mono-data-cell">{zar(GROSS_VALUE)}</strong> into the AbsaFlow Escrow account.
+                    {buyerName} deposits <strong className="text-on-surface font-mono-data-cell">{zar(GROSS_VALUE)}</strong> into the Shifa Escrow account.
                   </p>
                 </div>
                 <div className="flex flex-col p-space-md rounded-lg bg-surface-container-low">
@@ -305,7 +305,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                 <div className="h-full bg-tertiary-container rounded-full" style={{ width: `${pct}%` }}></div>
               </div>
               <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant">
-                Historical: {inv.fields.termsDays}-day wait → AbsaFlow: 2 hours
+                Historical: {inv.fields.termsDays}-day wait → Shifa: 2 hours
               </span>
             </div>
           </div>

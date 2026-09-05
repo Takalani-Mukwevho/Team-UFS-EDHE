@@ -145,7 +145,7 @@ export default function BankingDashboard() {
       <AuditTrail entries={audit} overrides={overrides} />
 
       <p className="footnote">
-        AbsaFlow prototype. Data loaded from AWS DynamoDB. Advance rates, fee rates and
+        Shifa prototype. Data loaded from AWS DynamoDB. Advance rates, fee rates and
         risk weights are determined by the scoring engine. Commercial terms in a real deployment
         would be set by the bank.
       </p>

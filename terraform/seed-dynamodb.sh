@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# AbsaFlow DynamoDB Seed Script
+# Shifa DynamoDB Seed Script
 # =============================================================================
 # Seeds DynamoDB tables from CSV/JSON files in ../Data/
 # Run: cd terraform && bash seed-dynamodb.sh

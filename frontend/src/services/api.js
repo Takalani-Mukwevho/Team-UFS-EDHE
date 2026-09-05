@@ -1,4 +1,4 @@
-// AbsaFlow API Service Layer
+// Shifa API Service Layer
 // Provides functions to interact with the backend Lambda functions via API Gateway
 
 import config from './config.js';
