@@ -1,4 +1,4 @@
-// API Configuration for AbsaFlow
+// API Configuration for SHIFA
 // In production, set VITE_API_BASE_URL environment variable
 
 const config = {

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import UploadIngestion from "./UploadIngestion";
 import OcrExtractionReview from "./OcrExtractionReview";
@@ -36,7 +37,8 @@ function saveNarrativeLocal(id, narrative) {
 }
 
 export default function UserDashboard() {
-  const [activeTab, setActiveTab] = useState("upload");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "ocr");
   const [selectedInvoiceIdx, setSelectedInvoiceIdx] = useState(0);
   const [liveMode, setLiveMode] = useState(true);
   const [uploadedInvoices, setUploadedInvoices] = useState([]);

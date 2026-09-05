@@ -52,7 +52,7 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
 
   if (!activeInvoice || !activeRisk) {
     return (
-      <div className="px-gutter-desktop py-space-xl max-w-[88rem] mx-auto w-full flex flex-col gap-space-xl">
+    <div className="px-space-md py-space-xl max-w-3xl mx-auto w-full flex flex-col gap-space-lg items-center text-center">
         <div className="flex flex-col gap-space-3xs">
           <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">Buyer risk check</h1>
           <p className="font-body-md text-body-md text-on-surface-variant">Select an invoice on the OCR Review tab first.</p>
@@ -77,7 +77,7 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
   const bandColor = risk.band === 'Low' ? 'var(--good)' : risk.band === 'Medium' ? 'var(--warn)' : 'var(--crit)';
 
   return (
-    <div className="px-gutter-desktop py-space-xl max-w-[88rem] mx-auto w-full flex flex-col gap-space-xl">
+    <div className="px-space-md py-space-xl max-w-3xl mx-auto w-full flex flex-col gap-space-lg">
       {/* Header */}
       <div className="flex flex-col gap-space-3xs">
         <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">Buyer risk check</h1>

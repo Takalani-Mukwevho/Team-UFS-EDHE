@@ -1,34 +1,33 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zar } from "../engine/format";
 import { POLICY } from "../engine/policy";
 import { sendEmailNotification } from "../services/api";
 
 const FEE_RATE = POLICY.feeRate;
-const MIN_ADVANCE_PCT = 0.3;
+const MIN_ADVANCE_PCT = 0.1;
 
 export default function InstantFundingOffer({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {} }) {
-  if (!activeInvoice) {
-    return (
-      <div className="max-w-container-max mx-auto w-full px-gutter-desktop py-space-xl">
-        <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">Your funding offer</h1>
-        <p className="font-body-md text-body-md text-on-surface-variant">Select an invoice on the OCR Review tab first.</p>
-      </div>
-    );
-  }
-
-  const inv = activeInvoice;
+  const inv = activeInvoice || {};
   const risk = activeRisk;
-  const GROSS_VALUE = inv.fields.amount;
-  const advanceRate = risk ? (POLICY[risk.band] || 0) : 0.5;
+  const GROSS_VALUE = inv.fields?.amount || 0;
+  const advanceRate = risk?.band ? (POLICY[risk.band] ?? 0.5) : 0.5;
   const ADVANCE_CAP = Math.round(GROSS_VALUE * advanceRate);
-  const MIN_ADVANCE = Math.round(GROSS_VALUE * MIN_ADVANCE_PCT);
-  const buyerName = inv.buyer;
-  const invoiceNumber = inv.fields.invoiceNumber;
+  const MIN_ADVANCE = Math.min(Math.round(GROSS_VALUE * MIN_ADVANCE_PCT), ADVANCE_CAP);
+  const invoiceKey = activeInvoice?.id || activeInvoice?.fields?.invoiceNumber || null;
+  const buyerName = inv.buyer || "Unknown Buyer";
+  const invoiceNumber = inv.fields?.invoiceNumber || "N/A";
+  const smeName = inv.sme || "Unknown SME";
 
   const [advance, setAdvance] = useState(ADVANCE_CAP);
   const [accepted, setAccepted] = useState(true);
   const [disbursed, setDisbursed] = useState(false);
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    setAdvance(ADVANCE_CAP);
+    setAccepted(true);
+    setDisbursed(false);
+  }, [invoiceKey, ADVANCE_CAP]);
 
   const fee = useMemo(() => advance * FEE_RATE, [advance]);
   const net = useMemo(() => advance - fee, [advance, fee]);
@@ -39,242 +38,159 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
     setSending(true);
     try {
       await sendEmailNotification({
-        subject: `[AbsaFlow] Disbursement Approved — ${invoiceNumber}`,
-        message: [
-          `AbsaFlow Invoice Funding — Disbursement Confirmation`,
-          ``,
-          `Invoice: ${invoiceNumber}`,
-          `SME Supplier: ${inv.sme}`,
-          `Buyer (Debtor): ${buyerName}`,
-          `Gross Invoice Value: ${zar(GROSS_VALUE)}`,
-          `Advance Amount: ${zar(advance)}`,
-          `Fee (${(FEE_RATE * 100).toFixed(0)}%): ${zar(fee)}`,
-          `Net Disbursement to SME: ${zar(net)}`,
-          ``,
-          `The advance has been processed and will be transferred to the SME\'s Absa commercial account within 2 hours.`,
-          `The buyer (${buyerName}) will be contacted for settlement on ${inv.fields.dueDate}.`,
-          ``,
-          `AbsaFlow — Instant Invoice Funding`,
-        ].join('\n'),
-        eventType: 'disbursement',
+        subject: `[SHIFA] Disbursement Approved — ${invoiceNumber}`,
+        message: `SHIFA Invoice Funding — Disbursement Confirmation\n\nInvoice: ${invoiceNumber}\nSME Supplier: ${smeName}\nBuyer (Debtor): ${buyerName}\nGross Invoice Value: ${zar(GROSS_VALUE)}\nAdvance Amount: ${zar(advance)}\nFee (${(FEE_RATE * 100).toFixed(0)}%): ${zar(fee)}\nNet Disbursement to SME: ${zar(net)}\n\nThe advance has been processed and will be transferred to the SME's Absa commercial account within 2 hours.\nThe buyer (${buyerName}) will be contacted for settlement on ${inv.fields.dueDate}.\n\nSHIFA — Instant Invoice Funding`,
+        eventType: "disbursement",
       });
       setDisbursed(true);
     } catch (err) {
-      console.error('Email notification failed:', err);
-      setDisbursed(true); // still mark as disbursed for demo
+      setDisbursed(true);
     } finally {
       setSending(false);
     }
   };
 
-  return (
-    <div className="w-full flex flex-col">
-      <div className="max-w-container-max mx-auto w-full px-gutter-desktop pt-space-lg">
+  if (!activeInvoice) {
+    return (
+      <div className="max-w-xl mx-auto w-full px-space-md py-space-xl text-center">
         <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight">Your funding offer</h1>
-        <p className="font-body-md text-body-md text-on-surface-variant">
-          Invoice {invoiceNumber} to {buyerName}, {zar(GROSS_VALUE)} due {inv.fields.dueDate}.
+        <p className="font-body-md text-body-md text-on-surface-variant">Select an invoice on the OCR Review tab first.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto w-full px-space-md lg:px-space-xl py-space-xl flex flex-col gap-space-lg">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="font-headline-xl text-headline-xl text-on-surface font-bold tracking-tight mb-space-xs">
+          Your funding offer
+        </h1>
+        <p className="font-body-sm text-body-sm text-on-surface-variant">
+          Invoice {invoiceNumber} to {buyerName}
         </p>
       </div>
 
-      <div className="max-w-container-max mx-auto w-full px-gutter-desktop py-space-xl flex flex-col gap-space-xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
-          {/* LEFT */}
-          <div className="lg:col-span-8 flex flex-col gap-space-lg">
-            {/* 4-box metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-surface-variant"></div>
-                <div className="flex items-center justify-between text-on-surface-variant mb-space-sm">
-                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Gross Invoice Value</span>
-                  <span className="material-symbols-outlined text-[1.125rem]">receipt_long</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(GROSS_VALUE)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Debtor: {buyerName}</span>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
+        <div className="flex flex-col gap-space-lg">
+          {/* Hero amount */}
+          <div className="text-center bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Net cash today</span>
+            <div className="flex items-baseline justify-center gap-space-xs mt-space-xs">
+              <span className="font-title-sm text-title-sm text-tertiary font-bold">ZAR</span>
+              <span className="font-display-xl text-display-xl font-bold text-tertiary tracking-tight">
+                {net.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <p className="font-body-xs text-xs text-on-surface-variant mt-space-xs">Direct instant EFT to {smeName}</p>
+          </div>
 
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-secondary"></div>
-                <div className="flex items-center justify-between text-on-surface-variant mb-space-sm">
-                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Advance Rate Ceiling</span>
-                  <span className="bg-surface-container-high font-mono-data-cell text-mono-data-cell px-space-xs py-space-3xs rounded text-on-surface font-bold">
-                    {(advanceRate * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(ADVANCE_CAP)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Risk band: {risk?.band || "N/A"}</span>
-                </div>
-              </div>
+          {/* Breakdown */}
+          <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs">
+        <div className="flex justify-between text-body-sm font-body-sm py-space-2xs border-b border-surface-container">
+          <span className="text-on-surface-variant">Invoice value</span>
+          <span className="font-mono-data-cell font-semibold text-on-surface">{zar(GROSS_VALUE)}</span>
+        </div>
+        <div className="flex justify-between text-body-sm font-body-sm py-space-2xs border-b border-surface-container">
+          <span className="text-on-surface-variant">Advance ({Math.round(advanceRate * 100)}%)</span>
+          <span className="font-mono-data-cell font-semibold text-on-surface">{zar(advance)}</span>
+        </div>
+        <div className="flex justify-between text-body-sm font-body-sm py-space-2xs border-b border-surface-container">
+          <span className="text-on-surface-variant">Fee ({(FEE_RATE * 100).toFixed(0)}%)</span>
+          <span className="font-mono-data-cell font-semibold text-error">-{zar(fee)}</span>
+        </div>
+        <div className="flex justify-between text-body-sm font-body-sm py-space-2xs font-bold">
+          <span className="text-on-surface">Net to you</span>
+          <span className="font-mono-data-cell text-tertiary">{zar(net)}</span>
+        </div>
+          </div>
 
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-outline-variant"></div>
-                <div className="flex items-center justify-between text-on-surface-variant mb-space-sm">
-                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Discount Fee ({(FEE_RATE * 100).toFixed(0)}%)</span>
-                  <span className="material-symbols-outlined text-[1.125rem]">percent</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(fee)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Fixed financing charge</span>
-                </div>
+          {/* Advance slider */}
+          {ADVANCE_CAP > 0 && (
+            <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
+              <div className="flex items-center justify-between">
+                <span className="font-body-sm font-bold text-on-surface">Adjust advance</span>
+                <span className="font-mono-data-cell text-xs font-bold text-primary">{pct}%</span>
               </div>
-
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1.5 bg-tertiary-container"></div>
-                <div className="flex items-center justify-between text-tertiary mb-space-sm">
-                  <div className="flex items-center gap-space-2xs">
-                    <span className="w-2 h-2 rounded-full bg-tertiary"></span>
-                    <span className="font-label-caps text-label-caps uppercase tracking-wider font-bold">Net Cash Available Today</span>
-                  </div>
-                  <span className="bg-surface-container-low text-tertiary px-space-xs py-space-3xs rounded-full font-label-caps text-label-caps uppercase">Immediate</span>
-                </div>
-                <div className="flex flex-col">
-                  <div className="flex items-baseline gap-space-2xs">
-                    <span className="font-title-sm text-title-sm text-tertiary font-bold">ZAR</span>
-                    <span className="font-display-lg text-display-lg text-tertiary font-bold tracking-tight">
-                      {net.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Direct instant EFT to SME account</span>
-                </div>
+              <input
+                aria-label="Adjust advance amount"
+                className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary"
+                max={ADVANCE_CAP}
+                min={MIN_ADVANCE}
+                step={1}
+                type="range"
+                value={Math.min(Math.max(advance, MIN_ADVANCE), ADVANCE_CAP)}
+                onChange={(e) => setAdvance(Math.min(Math.max(Number(e.target.value), MIN_ADVANCE), ADVANCE_CAP))}
+              />
+              <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                <span>{zar(MIN_ADVANCE)}</span>
+                <span className="text-primary font-semibold">{zar(ADVANCE_CAP)}</span>
+              </div>
+              <div className="flex gap-space-2xs">
+                <button type="button" onClick={() => setAdvance(MIN_ADVANCE)} className="flex-1 py-space-2xs bg-surface-container hover:bg-surface-container-high text-on-surface rounded text-xs font-semibold transition-colors">Min</button>
+                <button type="button" onClick={() => setAdvance(Math.round(ADVANCE_CAP * 0.5))} className="flex-1 py-space-2xs bg-surface-container hover:bg-surface-container-high text-on-surface rounded text-xs font-semibold transition-colors">50%</button>
+                <button type="button" onClick={() => setAdvance(ADVANCE_CAP)} className="flex-1 py-space-2xs bg-primary-container text-on-primary rounded text-xs font-bold shadow-sm transition-colors">Max</button>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Slider */}
-            {ADVANCE_CAP > 0 && (
-              <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs">
-                  <div>
-                    <span className="font-title-sm text-title-sm text-on-surface font-semibold block">Select Advance Facility Drawdown</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Adjust your required payout amount.</span>
-                  </div>
-                  <div className="flex items-center gap-space-2xs self-start sm:self-auto bg-surface-container-low px-space-sm py-space-xs rounded-lg">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Current:</span>
-                    <span className="font-mono-data-cell text-mono-data-cell text-primary font-bold">{pct}% DRAWDOWN</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-space-xs py-space-xs">
-                  <input
-                    className="w-full h-2.5 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
-                    max={ADVANCE_CAP}
-                    min={MIN_ADVANCE}
-                    step={1000}
-                    type="range"
-                    value={advance}
-                    onChange={(e) => setAdvance(Number(e.target.value))}
-                  />
-                  <div className="flex items-center justify-between font-mono-data-cell text-mono-data-cell text-on-surface-variant flex-wrap gap-1">
-                    <span>Min: {zar(MIN_ADVANCE)}</span>
-                    <span className="text-primary font-semibold">Max: {zar(ADVANCE_CAP)}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-space-xs pt-space-xs">
-                  <span className="font-label-caps text-label-caps text-on-surface-variant uppercase mr-space-2xs">Presets:</span>
-                  <button type="button" onClick={() => setAdvance(MIN_ADVANCE)} className="px-space-sm py-space-2xs bg-surface-container-low hover:bg-surface-container text-on-surface rounded font-body-sm text-body-sm transition-colors">Min</button>
-                  <button type="button" onClick={() => setAdvance(Math.round(ADVANCE_CAP * 0.5))} className="px-space-sm py-space-2xs bg-surface-container-low hover:bg-surface-container text-on-surface rounded font-body-sm text-body-sm transition-colors">50%</button>
-                  <button type="button" onClick={() => setAdvance(ADVANCE_CAP)} className="px-space-sm py-space-2xs bg-primary-container text-on-primary rounded font-body-sm text-body-sm font-semibold shadow-sm transition-colors">Max ({(advanceRate * 100).toFixed(0)}%)</button>
+        <div className="flex flex-col gap-space-lg">
+          {/* Timeline */}
+          <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
+            <span className="font-body-sm font-bold text-on-surface">How it works</span>
+            <div className="flex flex-col gap-space-xs">
+              <div className="flex items-start gap-space-sm">
+                <div className="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-[0.625rem] font-bold shrink-0">1</div>
+                <div>
+                  <span className="font-body-sm font-bold text-on-surface text-sm">Today — Cash advance</span>
+                  <p className="text-xs text-on-surface-variant">{zar(net)} transferred to {smeName} within 2 hours.</p>
                 </div>
               </div>
-            )}
-
-            {/* Lifecycle */}
-            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
-              <div className="flex items-center gap-space-xs">
-                <span className="material-symbols-outlined text-primary text-[1.25rem]">schedule</span>
-                <span className="font-title-sm text-title-sm text-on-surface font-semibold">Lifecycle & Settlement Protocol</span>
+              <div className="flex items-start gap-space-sm">
+                <div className="w-6 h-6 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center text-[0.625rem] font-bold shrink-0">2</div>
+                <div>
+                  <span className="font-body-sm font-bold text-on-surface text-sm">Day {inv.fields?.termsDays || 60} — Buyer pays</span>
+                  <p className="text-xs text-on-surface-variant">{buyerName} deposits {zar(GROSS_VALUE)} into SHIFA escrow.</p>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
-                <div className="flex flex-col p-space-md rounded-lg bg-surface-container-low">
-                  <div className="flex items-center justify-between mb-space-xs">
-                    <span className="font-label-caps text-label-caps bg-primary-container text-on-primary px-space-xs py-space-3xs rounded font-bold">STEP 01</span>
-                    <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant font-semibold">TODAY</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mb-space-3xs">Instant Cash Advance</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    <strong className="text-tertiary font-mono-data-cell">{zar(net)}</strong> transferred to {inv.sme}&apos;s account within 2 hours.
-                  </p>
-                </div>
-                <div className="flex flex-col p-space-md rounded-lg bg-surface-container-low">
-                  <div className="flex items-center justify-between mb-space-xs">
-                    <span className="font-label-caps text-label-caps bg-surface-container text-on-surface px-space-xs py-space-3xs rounded font-bold">STEP 02</span>
-                    <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant font-semibold">DAY {inv.fields.termsDays}</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mb-space-3xs">Debtor Remittance</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    {buyerName} deposits <strong className="text-on-surface font-mono-data-cell">{zar(GROSS_VALUE)}</strong> into the AbsaFlow Escrow account.
-                  </p>
-                </div>
-                <div className="flex flex-col p-space-md rounded-lg bg-surface-container-low">
-                  <div className="flex items-center justify-between mb-space-xs">
-                    <span className="font-label-caps text-label-caps bg-surface-container text-on-surface px-space-xs py-space-3xs rounded font-bold">STEP 03</span>
-                    <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant font-semibold">DAY {inv.fields.termsDays + 1}</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mb-space-3xs">Rebate Release</span>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Remaining <strong className="text-on-surface font-mono-data-cell">{zar(rebate)}</strong> swept to you. Zero residual liability.
-                  </p>
+              <div className="flex items-start gap-space-sm">
+                <div className="w-6 h-6 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center text-[0.625rem] font-bold shrink-0">3</div>
+                <div>
+                  <span className="font-body-sm font-bold text-on-surface text-sm">Day {(inv.fields?.termsDays || 60) + 1} — Rebate released</span>
+                  <p className="text-xs text-on-surface-variant">Remaining {zar(rebate)} swept to you. Zero residual liability.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div className="lg:col-span-4 flex flex-col gap-space-lg">
-            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-md flex flex-col gap-space-md sticky top-20">
-              <div className="flex items-center justify-between">
-                <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Ready for Disbursal</span>
-                <span className="flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell text-tertiary font-bold">
-                  <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span> SYSTEM READY
-                </span>
-              </div>
-              <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs">
-                <div className="flex justify-between items-center text-body-sm font-body-sm">
-                  <span className="text-on-surface-variant">SME Supplier:</span>
-                  <span className="font-semibold text-on-surface truncate max-w-[150px]">{inv.sme}</span>
-                </div>
-                <div className="flex justify-between items-center text-body-sm font-body-sm">
-                  <span className="text-on-surface-variant">Buyer (Debtor):</span>
-                  <span className="font-semibold text-on-surface truncate max-w-[150px]">{buyerName}</span>
-                </div>
-                <div className="flex justify-between items-center text-body-sm font-body-sm">
-                  <span className="text-on-surface-variant">Invoice:</span>
-                  <span className="font-mono-data-cell text-mono-data-cell text-on-surface">{invoiceNumber}</span>
-                </div>
-              </div>
-              <div className="flex flex-col py-space-xs">
-                <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Confirmed Cash-Out Transfer</span>
-                <span className="font-headline-xl text-headline-xl font-bold text-tertiary tracking-tight">{zar(net)}</span>
-              </div>
-              <button
-                type="button"
-                disabled={!accepted || disbursed}
-                onClick={handleDisburse}
-                className="w-full bg-primary-container hover:bg-primary text-on-primary font-title-sm text-title-sm py-space-md px-space-md rounded-lg shadow-md flex items-center justify-center gap-space-xs transition-all duration-200 hover:shadow-lg active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-[1.375rem]">bolt</span>
-                <span>{sending ? "Sending notification..." : disbursed ? "Disbursement Initiated" : "Accept Advance & Disburse"}</span>
-              </button>
-              <div className="flex items-start gap-space-xs text-body-sm font-body-sm text-on-surface-variant">
-                <input checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-1 rounded text-primary focus:ring-0 accent-primary cursor-pointer" id="accept-terms" type="checkbox" />
-                <label className="cursor-pointer select-none" htmlFor="accept-terms">
-                  I agree to the <a className="text-primary underline" href="#">Absa Receivables Purchase Agreement</a> and authorise collection from {buyerName} on the due date.
-                </label>
-              </div>
-            </div>
-            <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm">
-              <span className="font-title-sm text-title-sm font-semibold text-on-surface">Working Capital Impact</span>
-              <div className="flex items-center justify-between text-body-sm font-body-sm">
-                <span className="text-on-surface-variant">Cash Conversion Cycle:</span>
-                <span className="font-bold text-tertiary">-{inv.fields.termsDays} Days Accelerated</span>
-              </div>
-              <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-tertiary-container rounded-full" style={{ width: `${pct}%` }}></div>
-              </div>
-              <span className="font-mono-data-cell text-mono-data-cell text-on-surface-variant">
-                Historical: {inv.fields.termsDays}-day wait → AbsaFlow: 2 hours
+          {/* Disburse button */}
+          <div className="flex flex-col gap-space-sm">
+            <div className="flex items-center justify-between text-xs text-on-surface-variant">
+              <span>Invoice: {invoiceNumber}</span>
+              <span className="flex items-center gap-space-2xs">
+                <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+                Ready
               </span>
             </div>
+            <button
+              type="button"
+              disabled={!accepted || disbursed}
+              onClick={handleDisburse}
+              className="w-full bg-primary-container hover:bg-primary text-on-primary font-title-sm text-title-sm py-space-md rounded-lg shadow-md flex items-center justify-center gap-space-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[1.25rem]">bolt</span>
+              <span>{sending ? "Sending..." : disbursed ? "Disbursed" : "Accept & Disburse"}</span>
+            </button>
+            <label className="flex items-start gap-space-2xs text-xs text-on-surface-variant cursor-pointer">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="mt-0.5 accent-primary"
+              />
+              <span>I agree to the Absa Receivables Purchase Agreement and authorise collection from {buyerName} on the due date.</span>
+            </label>
           </div>
         </div>
       </div>

@@ -8,10 +8,10 @@ export default function Header({ active, onNavigate, onReset, liveMode, onToggle
       {/* Logo */}
       <div className="flex items-center gap-space-xs shrink-0">
         <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-title-sm text-title-sm font-bold">
-          A
+          S
         </div>
         <span className="font-title-sm text-title-sm text-on-surface font-bold tracking-tight">
-          AbsaFlow
+          SHIFA
         </span>
       </div>
 

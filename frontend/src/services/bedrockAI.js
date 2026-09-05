@@ -1,5 +1,5 @@
 // =============================================================================
-// Amazon Bedrock AI Service for AbsaFlow
+// Amazon Bedrock AI Service for SHIFA
 // =============================================================================
 // Provides two AI capabilities:
 // 1. Intelligent Invoice Extraction — understands ANY invoice format
