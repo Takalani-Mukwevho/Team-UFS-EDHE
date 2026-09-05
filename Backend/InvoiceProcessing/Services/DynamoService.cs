@@ -68,19 +68,26 @@ public class DynamoService : IDynamoService
 
     public async Task<Invoice?> GetInvoiceAsync(string invoiceIdOrNumber)
     {
-        // 1. Direct lookup by Table Partition Key (InvoiceNumber)
-        var request = new GetItemRequest
+        // 1. Direct lookup by Table Partition Key (InvoiceId)
+        try
         {
-            TableName = _invoiceTable,
-            Key = new Dictionary<string, AttributeValue>
+            var request = new GetItemRequest
             {
-                { "InvoiceNumber", new AttributeValue { S = invoiceIdOrNumber } }
-            }
-        };
+                TableName = _invoiceTable,
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    { "InvoiceId", new AttributeValue { S = invoiceIdOrNumber } }
+                }
+            };
 
-        var response = await _dynamoClient.GetItemAsync(request);
-        if (response.Item != null && response.Item.Count > 0)
-            return DeserializeInvoice(response.Item);
+            var response = await _dynamoClient.GetItemAsync(request);
+            if (response.Item != null && response.Item.Count > 0)
+                return DeserializeInvoice(response.Item);
+        }
+        catch
+        {
+            // Fall through to scan
+        }
 
         // 2. Fallback scan if the caller passed InvoiceId (e.g. "demo-inv-001") instead of InvoiceNumber
         var scanRequest = new ScanRequest
