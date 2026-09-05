@@ -109,6 +109,7 @@ function getMockInvoices() {
       status: 'awaiting', submitted: '07:42',
       fields: { invoiceNumber: 'INV-1042', amount: 185000, issueDate: '01/09/2026', dueDate: '31/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 99.4, supplier: 98.8, buyer: 99.1, amount: 99.7, issueDate: 97.2, dueDate: 97.6, termsDays: 95.4 },
+      absaCustomer: true, absaMonths: 18, priorFundings: 4,
       checksPass: true,
     },
     {
@@ -116,6 +117,7 @@ function getMockInvoices() {
       status: 'awaiting', submitted: '08:03',
       fields: { invoiceNumber: 'INV-2087', amount: 420000, issueDate: '12/08/2026', dueDate: '11/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 98.9, supplier: 98.4, buyer: 97.8, amount: 99.5, issueDate: 96.9, dueDate: 97.1, termsDays: 94.8 },
+      absaCustomer: true, absaMonths: 18, priorFundings: 4,
       checksPass: true,
     },
     {
@@ -123,6 +125,7 @@ function getMockInvoices() {
       status: 'awaiting', submitted: '08:19',
       fields: { invoiceNumber: 'INV-3310', amount: 96400, issueDate: '26/08/2026', dueDate: '25/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 99.1, supplier: 97.9, buyer: 98.6, amount: 99.4, issueDate: 96.4, dueDate: 96.8, termsDays: 93.2 },
+      absaCustomer: true, absaMonths: 7, priorFundings: 2,
       checksPass: true,
     },
     {
@@ -130,6 +133,7 @@ function getMockInvoices() {
       status: 'awaiting', submitted: '08:31',
       fields: { invoiceNumber: 'INV-5521', amount: 268750, issueDate: '20/08/2026', dueDate: '19/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 98.2, supplier: 96.1, buyer: 91.4, amount: 99.2, issueDate: 88.7, dueDate: 95.9, termsDays: 92.6 },
+      absaCustomer: true, absaMonths: 2, priorFundings: 1,
       checksPass: true,
     },
     {
@@ -137,6 +141,7 @@ function getMockInvoices() {
       status: 'awaiting', submitted: '08:47',
       fields: { invoiceNumber: 'INV-7043', amount: 142300, issueDate: '18/08/2026', dueDate: '17/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 99.0, supplier: 98.2, buyer: 97.4, amount: 99.6, issueDate: 96.1, dueDate: 96.5, termsDays: 94.1 },
+      absaCustomer: false, absaMonths: 0, priorFundings: 3,
       checksPass: true,
     },
     {
@@ -144,6 +149,7 @@ function getMockInvoices() {
       status: 'awaiting', submitted: '09:02',
       fields: { invoiceNumber: 'INV-8890', amount: 58900, issueDate: '29/08/2026', dueDate: '28/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 97.6, supplier: 89.3, buyer: 96.8, amount: 99.1, issueDate: 94.2, dueDate: 94.6, termsDays: 90.4 },
+      absaCustomer: false, absaMonths: 0, priorFundings: 0,
       checksPass: true,
     },
     {
@@ -151,6 +157,7 @@ function getMockInvoices() {
       status: 'blocked', submitted: '09:11',
       fields: { invoiceNumber: 'INV-1042', amount: 185000, issueDate: '01/09/2026', dueDate: '31/10/2026', termsDays: 60 },
       confidence: { invoiceNumber: 99.4, supplier: 98.8, buyer: 99.1, amount: 99.7, issueDate: 97.2, dueDate: 97.6, termsDays: 95.4 },
+      absaCustomer: true, absaMonths: 18, priorFundings: 4,
       checksPass: false, dupNote: 'matches ledger entry 07:42',
     },
   ];

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { zar } from "../engine/format";
-import { POLICY } from "../engine/policy";
+import { POLICY, ABSA, RULES } from "../engine/policy";
+import { evaluateRules, pricingFor, APPROVE, DECLINE } from "../engine/rules";
 import { sendEmailNotification } from "../services/api";
 
-const FEE_RATE = POLICY.feeRate;
 const MIN_ADVANCE_PCT = 0.3;
 
 export default function InstantFundingOffer({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {} }) {
@@ -18,8 +18,12 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
 
   const inv = activeInvoice;
   const risk = activeRisk;
+  const rules = evaluateRules(inv, activeBuyer, smes[inv.smeId]);
+  const pricing = pricingFor(risk?.band, rules.absa);
+  const absaApplied = rules.absa.qualifies && pricing.advanceRate > 0;
   const GROSS_VALUE = inv.fields.amount;
-  const advanceRate = risk ? (POLICY[risk.band] || 0) : 0.5;
+  const advanceRate = risk ? pricing.advanceRate : 0.5;
+  const FEE_RATE = risk ? pricing.feeRate : POLICY.feeRate;
   const ADVANCE_CAP = Math.round(GROSS_VALUE * advanceRate);
   const MIN_ADVANCE = Math.round(GROSS_VALUE * MIN_ADVANCE_PCT);
   const buyerName = inv.buyer;
@@ -30,7 +34,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
   const [disbursed, setDisbursed] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const fee = useMemo(() => advance * FEE_RATE, [advance]);
+  const fee = useMemo(() => advance * FEE_RATE, [advance, FEE_RATE]);
   const net = useMemo(() => advance - fee, [advance, fee]);
   const rebate = useMemo(() => GROSS_VALUE - net, [net]);
   const pct = useMemo(() => ADVANCE_CAP > 0 ? Math.round((advance / ADVANCE_CAP) * 100) : 0, [advance, ADVANCE_CAP]);
@@ -48,7 +52,7 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
           `Buyer (Debtor): ${buyerName}`,
           `Gross Invoice Value: ${zar(GROSS_VALUE)}`,
           `Advance Amount: ${zar(advance)}`,
-          `Fee (${(FEE_RATE * 100).toFixed(0)}%): ${zar(fee)}`,
+          `Fee (${+(FEE_RATE * 100).toFixed(2)}%): ${zar(fee)}`,
           `Net Disbursement to SME: ${zar(net)}`,
           ``,
           `The advance has been processed and will be transferred to the SME\'s Absa commercial account within 2 hours.`,
@@ -80,6 +84,29 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
           {/* LEFT */}
           <div className="lg:col-span-8 flex flex-col gap-space-lg">
+            {/* Absa relationship benefit */}
+            {absaApplied && (
+              <div className="bg-tertiary-container/20 rounded-xl p-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+                <div className="flex items-center gap-space-sm">
+                  <span className="material-symbols-outlined text-tertiary text-[1.5rem]">workspace_premium</span>
+                  <div className="flex flex-col">
+                    <span className="font-title-sm text-title-sm font-semibold text-on-surface">Absa customer pricing applied</span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant">
+                      {rules.absa.months} months of banking history, past the {RULES.absaMinMonths}-month threshold.
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-space-xs shrink-0">
+                  <span className="px-space-sm py-space-3xs rounded-full bg-surface-container-lowest font-mono-data-cell text-mono-data-cell text-tertiary font-semibold">
+                    {Math.round(pricing.baseRate * 100)}% → {Math.round(pricing.advanceRate * 100)}% advance
+                  </span>
+                  <span className="px-space-sm py-space-3xs rounded-full bg-surface-container-lowest font-mono-data-cell text-mono-data-cell text-tertiary font-semibold">
+                    fee −{+(ABSA.feeDiscount * 100).toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* 4-box metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
               <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
@@ -104,19 +131,24 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(ADVANCE_CAP)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Risk band: {risk?.band || "N/A"}</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">
+                    Risk band: {risk?.band || "N/A"}
+                    {absaApplied && <span className="text-tertiary"> · +{Math.round(ABSA.advanceUplift * 100)}% Absa uplift</span>}
+                  </span>
                 </div>
               </div>
 
               <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-outline-variant"></div>
                 <div className="flex items-center justify-between text-on-surface-variant mb-space-sm">
-                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Discount Fee ({(FEE_RATE * 100).toFixed(0)}%)</span>
+                  <span className="font-label-caps text-label-caps uppercase tracking-wider">Discount Fee ({+(FEE_RATE * 100).toFixed(2)}%)</span>
                   <span className="material-symbols-outlined text-[1.125rem]">percent</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">{zar(fee)}</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">Fixed financing charge</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant mt-space-3xs">
+                    {absaApplied ? `Discounted from ${+(POLICY.feeRate * 100).toFixed(2)}% standard rate` : "Fixed financing charge"}
+                  </span>
                 </div>
               </div>
 
@@ -224,8 +256,9 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
             <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-md flex flex-col gap-space-md sticky top-20">
               <div className="flex items-center justify-between">
                 <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Ready for Disbursal</span>
-                <span className="flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell text-tertiary font-bold">
-                  <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span> SYSTEM READY
+                <span className={`flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell font-bold ${rules.outcome === APPROVE ? "text-tertiary" : rules.outcome === DECLINE ? "text-error" : "text-on-surface"}`}>
+                  <span className={`w-2 h-2 rounded-full ${rules.outcome === APPROVE ? "bg-tertiary animate-pulse" : rules.outcome === DECLINE ? "bg-error" : "bg-on-surface-variant"}`}></span>
+                  {rules.outcome.toUpperCase()}
                 </span>
               </div>
               <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs">
