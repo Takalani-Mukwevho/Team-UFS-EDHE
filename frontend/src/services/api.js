@@ -1,8 +1,7 @@
-// Shifa API Service Layer
+// AbsaFlow API Service Layer
 // Provides functions to interact with the backend Lambda functions via API Gateway
 
 import config from './config.js';
-import { invoiceFlags } from '../engine/decision.js';
 
 /**
  * Base fetch wrapper with timeout and error handling
@@ -90,11 +89,9 @@ export async function evaluateFunding(invoiceId) {
   });
 }
 
-/** Update invoice status (persist decisions to DynamoDB).
- * `decision` persists the desk's funding decision; `extra` carries other
- * ledger fields such as `disbursement` (the SME's accepted payout). */
-export async function updateInvoiceStatus(invoiceId, status, decision = null, extra = null) {
-  const body = { status, ...(extra || {}) };
+/** Update invoice status (persist decisions to DynamoDB) */
+export async function updateInvoiceStatus(invoiceId, status, decision = null) {
+  const body = { status };
   if (decision) body.decision = decision;
   return await apiFetch(`/api/invoices/${encodeURIComponent(invoiceId)}/status`, {
     method: 'POST',
@@ -142,6 +139,23 @@ export async function runDemo() {
 }
 
 // =============================================================================
+// NARRATIVE ENDPOINTS (DynamoDB persistence)
+// =============================================================================
+
+/** Save a generated narrative to DynamoDB */
+export async function saveNarrative(invoiceId, narrative) {
+  return await apiFetch('/api/narratives', {
+    method: 'POST',
+    body: JSON.stringify({ invoiceId, narrative }),
+  });
+}
+
+/** Get a stored narrative from DynamoDB */
+export async function getNarrative(invoiceId) {
+  return await apiFetch(`/api/narratives?invoiceId=${encodeURIComponent(invoiceId)}`);
+}
+
+// =============================================================================
 // NOTIFICATION ENDPOINTS
 // =============================================================================
 
@@ -165,7 +179,7 @@ export function transformInvoiceForUI(invoice, buyer, sme) {
   const issueDate = new Date(invoice.issueDate);
   const termsDays = Math.ceil((dueDate - issueDate) / (1000 * 60 * 60 * 24));
 
-  const uiInvoice = {
+  return {
     id: invoice.invoiceId || invoice.invoiceNumber,
     sme: sme?.companyName || extracted.vendorName || 'Unknown SME',
     smeVerified: sme?.isVerified || false,
@@ -195,14 +209,8 @@ export function transformInvoiceForUI(invoice, buyer, sme) {
     dupNote: invoice.status === 'Duplicate' ? 'matches ledger entry' : undefined,
     extractedData: extracted,
     fundingDecision: funding,
-    disbursement: invoice.disbursement || null,
     raw: invoice,
   };
-
-  // Flags for checking the decision/disbursement status without re-parsing the
-  // raw ledger shape at every call site.
-  uiInvoice.flags = invoiceFlags(uiInvoice);
-  return uiInvoice;
 }
 
 export function transformBuyerForUI(buyer) {

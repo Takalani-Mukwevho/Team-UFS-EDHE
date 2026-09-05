@@ -30,9 +30,9 @@ export default function DecisionSection({ c, risk, onDecide, buyers: buyersProp 
     setSending(true);
     try {
       await sendEmailNotification({
-        subject: `[Shifa] Funding Decision — ${c.fields.invoiceNumber} — ${finalLine}`,
+        subject: `[AbsaFlow] Funding Decision — ${c.fields.invoiceNumber} — ${finalLine}`,
         message: [
-          `Shifa Invoice Funding — Analyst Decision`,
+          `AbsaFlow Invoice Funding — Analyst Decision`,
           ``,
           `Invoice: ${c.fields.invoiceNumber}`,
           `SME Supplier: ${c.sme}`,
@@ -52,7 +52,7 @@ export default function DecisionSection({ c, risk, onDecide, buyers: buyersProp 
           ``,
           overriding ? `Override Reason: ${reason.trim()}` : `Analyst accepted the engine recommendation.`,
           ``,
-          `Shifa — Invoice Finance Desk`,
+          `AbsaFlow — Invoice Finance Desk`,
         ].join('\n'),
         eventType: 'funding-decision',
       });

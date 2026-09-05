@@ -1,4 +1,4 @@
-// PDF Extraction Engine for Shifa
+// PDF Extraction Engine for AbsaFlow
 // Parses invoice PDF binary files directly in the browser using fflate decompression
 
 import * as fflate from 'fflate';
@@ -527,7 +527,7 @@ export async function extractInvoiceFromPdf(fileOrBuffer, fileName = '') {
     taxAmount: parsed.taxAmount || known?.taxAmount || 23250,
     totalAmount: parsed.totalAmount || known?.totalAmount || 178250,
 
-    rawText: parsed.rawText || rawText || 'Extracted via Shifa Browser PDF Decompressor',
+    rawText: parsed.rawText || rawText || 'Extracted via AbsaFlow Browser PDF Decompressor',
   };
 
   return result;

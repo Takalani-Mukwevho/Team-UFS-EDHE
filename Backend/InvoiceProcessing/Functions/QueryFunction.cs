@@ -73,7 +73,6 @@ public class QueryFunction
                 var update = JsonSerializer.Deserialize<JsonElement>(body);
                 var newStatus = update.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
                 var decisionJson = update.TryGetProperty("decision", out var d) ? d.GetRawText() : null;
-                var disbursementJson = update.TryGetProperty("disbursement", out var dj) ? dj.GetRawText() : null;
 
                 if (string.IsNullOrEmpty(newStatus))
                     return CreateResponse(400, new { error = "status is required" });
@@ -90,11 +89,6 @@ public class QueryFunction
                 if (!string.IsNullOrEmpty(decisionJson))
                 {
                     attributes["FundingDecision"] = new AttributeValueUpdate { Value = new AttributeValue { S = decisionJson }, Action = AttributeAction.PUT };
-                }
-
-                if (!string.IsNullOrEmpty(disbursementJson))
-                {
-                    attributes["Disbursement"] = new AttributeValueUpdate { Value = new AttributeValue { S = disbursementJson }, Action = AttributeAction.PUT };
                 }
 
                 await client.UpdateItemAsync(new UpdateItemRequest
@@ -223,9 +217,6 @@ public class QueryFunction
                 : null,
             FundingDecision = i.ContainsKey("FundingDecision") && !string.IsNullOrEmpty(i["FundingDecision"].S)
                 ? JsonSerializer.Deserialize<Models.FundingDecision>(i["FundingDecision"].S)
-                : null,
-            Disbursement = i.ContainsKey("Disbursement") && !string.IsNullOrEmpty(i["Disbursement"].S)
-                ? JsonSerializer.Deserialize<Models.Disbursement>(i["Disbursement"].S)
                 : null,
         };
     }

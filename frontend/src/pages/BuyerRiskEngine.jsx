@@ -1,9 +1,55 @@
+import { useState, useEffect, useRef } from "react";
 import Details from "../components/Details";
-import RulesEngine from "../components/RulesEngine";
 import { zar } from "../engine/format";
-import { evaluateRules, pricingFor } from "../engine/rules";
+import { BANDS, POLICY } from "../engine/policy";
+import { aiGenerateRiskNarrative } from "../services/bedrockAI.js";
 
-export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {} }) {
+export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {}, narrative: propNarrative, onNarrativeReady }) {
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
+  const fetchIdRef = useRef(null);
+
+  // The narrative comes from the parent (localStorage/DynamoDB-backed) or from the invoice object
+  const resolvedNarrative = propNarrative || activeRisk?.narrative || activeInvoice?.riskNarrative || null;
+
+  // If a narrative arrives from the parent, clear loading immediately
+  useEffect(() => {
+    if (resolvedNarrative && narrativeLoading) {
+      setNarrativeLoading(false);
+      fetchIdRef.current = null;
+    }
+  }, [resolvedNarrative]);
+
+  // Auto-fetch only when we truly have NO narrative
+  useEffect(() => {
+    if (!activeInvoice || !activeRisk || resolvedNarrative) return;
+    if (fetchIdRef.current === activeInvoice.id) return;
+
+    fetchIdRef.current = activeInvoice.id;
+    let cancelled = false;
+    setNarrativeLoading(true);
+
+    (async () => {
+      try {
+        const smeData = smes[activeInvoice.smeId] || {};
+        const result = await aiGenerateRiskNarrative({
+          invoice: activeInvoice,
+          risk: activeRisk,
+          buyer: activeBuyer || {},
+          sme: smeData,
+        });
+        if (!cancelled && result) {
+          onNarrativeReady?.(activeInvoice.id, result);
+        }
+      } catch (err) {
+        console.warn('[BuyerRiskEngine] Narrative fetch failed:', err.message);
+      } finally {
+        if (!cancelled) setNarrativeLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeInvoice?.id, resolvedNarrative]);
+
   if (!activeInvoice || !activeRisk) {
     return (
       <div className="px-gutter-desktop py-space-xl max-w-[88rem] mx-auto w-full flex flex-col gap-space-xl">
@@ -20,13 +66,15 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
   const b = activeBuyer;
   const sme = smes[inv.smeId];
 
-  const rules = evaluateRules(inv, b, sme);
-  const { advanceRate, feeRate } = pricingFor(risk.band, rules.absa);
+  const advanceRate = POLICY[risk.band] || 0;
   const advanceAmount = Math.round(inv.fields.amount * advanceRate);
+  const feeRate = POLICY.feeRate;
   const fee = Math.round(advanceAmount * feeRate);
   const netToSme = advanceAmount - fee;
   const fraudProb = risk.band === "Low" ? "0.02%" : risk.band === "Medium" ? "12.4%" : "41.0%";
   const fraudLabel = risk.band === "Low" ? "Extremely Low" : risk.band === "Medium" ? "Moderate" : "Elevated";
+
+  const bandColor = risk.band === 'Low' ? 'var(--good)' : risk.band === 'Medium' ? 'var(--warn)' : 'var(--crit)';
 
   return (
     <div className="px-gutter-desktop py-space-xl max-w-[88rem] mx-auto w-full flex flex-col gap-space-xl">
@@ -37,6 +85,61 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
           How likely is <strong>{inv.buyer}</strong> to pay invoice <strong>{inv.fields.invoiceNumber}</strong> ({zar(inv.fields.amount)}) on time?
         </p>
       </div>
+
+      {/* AI Risk Narrative — compact card */}
+      {(resolvedNarrative || narrativeLoading) && (
+        <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm border-l-4" style={{ borderColor: bandColor }}>
+          <div className="flex items-center justify-between mb-space-xs">
+            <div className="flex items-center gap-space-xs">
+              <span className="material-symbols-outlined text-[1.125rem]" style={{ color: 'var(--accent)' }}>auto_stories</span>
+              <span className="font-title-sm text-title-sm font-bold text-on-surface">AI Risk Narrative</span>
+            </div>
+            {narrativeLoading && !resolvedNarrative ? (
+              <span className="flex items-center gap-space-2xs text-xs font-semibold text-primary">
+                <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                Analysing...
+              </span>
+            ) : (
+              <span className="font-label-caps text-[10px] uppercase px-space-2xs py-3xs rounded-full font-bold" style={{
+                background: resolvedNarrative?.source === 'bedrock' ? 'var(--accent-soft)' : 'var(--surface-3)',
+                color: resolvedNarrative?.source === 'bedrock' ? 'var(--accent)' : 'var(--ink-2)',
+              }}>
+                {resolvedNarrative?.source === 'bedrock' ? 'Bedrock AI' : 'Generated'}
+              </span>
+            )}
+          </div>
+          {narrativeLoading && !resolvedNarrative ? (
+            <div className="flex flex-col gap-space-2xs">
+              <div className="h-3 bg-surface-container rounded animate-pulse w-11/12"></div>
+              <div className="h-3 bg-surface-container rounded animate-pulse w-4/5"></div>
+              <div className="h-3 bg-surface-container rounded animate-pulse w-3/4"></div>
+            </div>
+          ) : resolvedNarrative ? (
+            <div className="flex flex-col gap-space-xs">
+              <p className="font-body-sm text-body-sm text-on-surface leading-relaxed">
+                {resolvedNarrative.narrative}
+              </p>
+              {resolvedNarrative.keyFactors?.length > 0 && (
+                <div className="flex flex-col gap-space-2xs mt-space-2xs">
+                  {resolvedNarrative.keyFactors.map((factor, i) => (
+                    <div key={i} className="flex items-center gap-space-2xs text-xs text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[0.75rem] shrink-0" style={{ color: bandColor }}>check_circle</span>
+                      <span>{factor}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {resolvedNarrative.recommendation && (
+                <div className="flex items-center gap-space-xs mt-space-2xs text-xs">
+                  <span className="material-symbols-outlined text-[0.75rem]" style={{ color: bandColor }}>lightbulb</span>
+                  <span className="text-on-surface-variant">Recommendation:</span>
+                  <span className="font-semibold text-on-surface">{resolvedNarrative.recommendation}</span>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Headline approval card */}
       <div className="relative overflow-hidden rounded-xl bg-surface-container-lowest p-space-xl shadow-sm">
@@ -71,7 +174,7 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
               <span className="font-mono-data-cell text-mono-data-cell font-semibold text-on-surface">Absa Instant Pay (RTC)</span>
             </div>
             <div className="flex items-center justify-between text-body-sm font-body-sm">
-              <span className="text-on-surface-variant">Discount Fee ({+(feeRate * 100).toFixed(2)}%):</span>
+              <span className="text-on-surface-variant">Discount Fee ({(feeRate * 100).toFixed(0)}%):</span>
               <span className="font-mono-data-cell text-mono-data-cell font-semibold text-tertiary">{zar(fee)}</span>
             </div>
             <div className="flex items-center justify-between text-body-sm font-body-sm">
@@ -84,9 +187,6 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
           </div>
         </div>
       </div>
-
-      {/* Rules engine pre-screen */}
-      <RulesEngine result={rules} />
 
       {/* Risk breakdown */}
       <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
@@ -233,6 +333,22 @@ export default function BuyerRiskEngine({ onContinue, activeInvoice, activeRisk,
             <span className="text-on-surface-variant">Contractual Risk:</span>
             <span className="font-label-caps text-label-caps font-bold text-tertiary uppercase">Cleared</span>
           </div>
+        </div>
+      </div>
+
+      {/* Trust signal */}
+      <div className="flex items-center gap-space-md bg-surface-container-low p-space-sm rounded-xl">
+        <span className="material-symbols-outlined text-[1.5rem] shrink-0" style={{ color: 'var(--good)' }}>shield</span>
+        <div className="flex flex-col">
+          <span className="font-body-sm text-body-sm font-semibold text-on-surface">Why this result?</span>
+          <span className="font-body-sm text-body-sm text-on-surface-variant">
+            {risk.band === "Low"
+              ? `${inv.buyer} has historically paid ${Math.round((b?.onTimeRate || 0) * 100)}% of verified invoices on time, with an average settlement time of ${b?.avgSettlementDays || 0} days. This invoice appears suitable for early funding.`
+              : risk.band === "Medium"
+              ? `${inv.buyer}'s payment history shows some inconsistency. Score ${risk.total.toFixed(1)} indicates moderate risk — additional verification may be needed.`
+              : `${inv.buyer}'s payment profile raises concerns. Score ${risk.total.toFixed(1)} falls below the funding threshold. We recommend standard collection terms.`
+            }
+          </span>
         </div>
       </div>
 

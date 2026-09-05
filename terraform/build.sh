@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build script for Shifa Lambda deployment packages
+# Build script for AbsaFlow Lambda deployment packages
 # Run from the repo root: ./terraform/build.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -9,7 +9,7 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$REPO_ROOT/Backend/InvoiceProcessing"
 BUILD_DIR="$SCRIPT_DIR/build"
 
-echo "=== Shifa Lambda Build ==="
+echo "=== AbsaFlow Lambda Build ==="
 echo "Repo root: $REPO_ROOT"
 echo "Build dir: $BUILD_DIR"
 echo ""

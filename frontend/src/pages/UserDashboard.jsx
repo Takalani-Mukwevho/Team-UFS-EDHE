@@ -6,6 +6,7 @@ import BuyerRiskEngine from "./BuyerRiskEngine";
 import InstantFundingOffer from "./InstantFundingOffer";
 import { useApiData } from "../services/useApiData";
 import { scoreCase } from "../engine/scoring";
+import { getNarrative, saveNarrative as apiSaveNarrative } from "../services/api";
 
 const PAGES = {
   upload: UploadIngestion,
@@ -16,6 +17,24 @@ const PAGES = {
 
 const ORDER = ["upload", "ocr", "risk", "funding"];
 
+// ── localStorage helpers for narrative persistence ──────────────────────────
+const NARRATIVE_STORAGE_KEY = "absaflow_narratives";
+
+function loadNarratives() {
+  try {
+    const raw = localStorage.getItem(NARRATIVE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function saveNarrativeLocal(id, narrative) {
+  try {
+    const all = loadNarratives();
+    all[id] = narrative;
+    localStorage.setItem(NARRATIVE_STORAGE_KEY, JSON.stringify(all));
+  } catch { /* ignore */ }
+}
+
 export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("upload");
   const [selectedInvoiceIdx, setSelectedInvoiceIdx] = useState(0);
@@ -23,8 +42,10 @@ export default function UserDashboard() {
   const [uploadedInvoices, setUploadedInvoices] = useState([]);
   const [extraBuyers, setExtraBuyers] = useState({});
   const [extraSmes, setExtraSmes] = useState({});
+  // Seed narratives from localStorage so they persist across page refreshes
+  const [narratives, setNarratives] = useState(loadNarratives);
 
-  const { invoices, buyers, smes, loading, dataSource, refetch } = useApiData({ useMockFallback: !liveMode });
+  const { invoices, buyers, smes, loading, dataSource } = useApiData({ useMockFallback: !liveMode });
 
   // Merge extra buyers and smes from uploads
   const mergedBuyers = useMemo(() => ({
@@ -46,27 +67,54 @@ export default function UserDashboard() {
     return [...uploadedFiltered, ...base];
   }, [invoices, uploadedInvoices]);
 
+  // Load narratives from DynamoDB for invoices that don't have one yet
+  useEffect(() => {
+    if (!combinedInvoices.length) return;
+    let cancelled = false;
+
+    for (const inv of combinedInvoices) {
+      if (!inv.id) continue;
+      if (narratives[inv.id] || inv.riskNarrative) continue;
+
+      getNarrative(inv.id)
+        .then((data) => {
+          if (!cancelled && data?.narrative) {
+            setNarratives((prev) => ({ ...prev, [inv.id]: data.narrative }));
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => { cancelled = true; };
+  }, [combinedInvoices, narratives]);
+
   // The selected invoice
   const activeInvoice = combinedInvoices[selectedInvoiceIdx] || combinedInvoices[0] || null;
 
-  // While the funding offer tab is open, keep the SME side in step with the
-  // credit desk: re-read the shared ledger on entry and then every few seconds
-  // so an acceptance (or decline) shows up automatically.
-  useEffect(() => {
-    if (activeTab !== "funding") return;
-    refetch();
-    const id = setInterval(() => refetch(), 8000);
-    return () => clearInterval(id);
-  }, [activeTab, refetch]);
-
-  // Compute risk for the active invoice
+  // Compute risk for the active invoice, merging in AI narrative
   const activeRisk = useMemo(() => {
     if (!activeInvoice) return null;
-    return scoreCase(activeInvoice, mergedBuyers);
-  }, [activeInvoice, mergedBuyers]);
+    const risk = scoreCase(activeInvoice, mergedBuyers);
+    // Merge narrative from: localStorage state → invoice object → pipeline
+    const narrative =
+      narratives[activeInvoice.id] ||
+      activeInvoice.riskNarrative ||
+      activeInvoice.risk?.narrative ||
+      null;
+    if (narrative) {
+      return { ...risk, narrative };
+    }
+    return risk;
+  }, [activeInvoice, mergedBuyers, narratives]);
 
   // Get the buyer data for the active invoice
   const activeBuyer = activeInvoice ? (mergedBuyers[activeInvoice.buyer] || null) : null;
+
+  // Current narrative for the active invoice
+  const currentNarrative = useMemo(() => {
+    if (!activeInvoice) return null;
+    return narratives[activeInvoice.id] || activeInvoice.riskNarrative || null;
+  }, [activeInvoice, narratives]);
 
   const ActivePage = PAGES[activeTab];
 
@@ -81,16 +129,35 @@ export default function UserDashboard() {
   }
 
   const handleUploadInvoice = useCallback((newInvoice, newBuyer, newSme) => {
-    if (newBuyer?.companyName || newBuyer?.name) {
-      const bName = newBuyer.companyName || newBuyer.name;
-      setExtraBuyers((prev) => ({ ...prev, [bName]: newBuyer }));
+    const invoiceBuyerName = newInvoice?.buyer || newBuyer?.companyName || newBuyer?.name;
+    if (invoiceBuyerName && newBuyer) {
+      setExtraBuyers((prev) => ({ ...prev, [invoiceBuyerName]: newBuyer }));
+    }
+    if (newBuyer?.companyName) {
+      setExtraBuyers((prev) => ({ ...prev, [newBuyer.companyName]: newBuyer }));
+    }
+    if (newBuyer?.name && newBuyer.name !== newBuyer?.companyName) {
+      setExtraBuyers((prev) => ({ ...prev, [newBuyer.name]: newBuyer }));
     }
     if (newSme?.smeId) {
       setExtraSmes((prev) => ({ ...prev, [newSme.smeId]: newSme }));
     }
     setUploadedInvoices((prev) => [newInvoice, ...prev.filter((inv) => inv.id !== newInvoice.id)]);
-    setSelectedInvoiceIdx(0); // Immediately activate the uploaded invoice
+    setSelectedInvoiceIdx(0);
   }, []);
+
+  // Called by BuyerRiskEngine when a narrative is fetched
+  const handleNarrativeReady = useCallback((invId, narr) => {
+    setNarratives((prev) => ({ ...prev, [invId]: narr }));
+    saveNarrativeLocal(invId, narr);
+    apiSaveNarrative(invId, narr).catch(() => {});
+    // Also patch the invoice object so activeRisk picks it up
+    const inv = combinedInvoices.find((i) => i.id === invId);
+    if (inv) {
+      inv.riskNarrative = narr;
+      if (inv.risk) inv.risk.narrative = narr;
+    }
+  }, [combinedInvoices]);
 
   return (
     <div className="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen">
@@ -116,12 +183,12 @@ export default function UserDashboard() {
           activeInvoice={activeInvoice}
           activeRisk={activeRisk}
           activeBuyer={activeBuyer}
+          narrative={currentNarrative}
+          onNarrativeReady={handleNarrativeReady}
           buyers={mergedBuyers}
           smes={mergedSmes}
           loading={loading}
           dataSource={dataSource}
-          onRefresh={refetch}
-          refreshing={loading}
         />
       </main>
     </div>

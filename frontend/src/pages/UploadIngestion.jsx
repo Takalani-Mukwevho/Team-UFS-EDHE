@@ -383,18 +383,13 @@ export default function UploadIngestion({
                       <div className="flex items-center gap-space-2xs">
                         <span className="material-symbols-outlined text-tertiary text-[1.5rem]">verified</span>
                         <span className="font-title-sm text-title-sm font-bold text-on-surface">
-                          AWS Pipeline Complete — Funding Recommendation Generated
+                          AWS Pipeline Complete — Pre-Approved Offer Generated
                         </span>
                       </div>
-                      <span className="bg-surface-container-high text-on-surface px-space-xs py-space-3xs rounded-full font-label-caps text-xs font-bold uppercase">
-                        Pending Credit Approval
+                      <span className="bg-tertiary-container text-on-tertiary px-space-xs py-space-3xs rounded-full font-label-caps text-xs font-bold uppercase">
+                        Funded (85% Advance)
                       </span>
                     </div>
-
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">
-                      Your indicative offer is ready, but funds are released only after the AbsaFlow credit desk
-                      accepts the recommendation — the advance unlocks on the funding offer tab.
-                    </p>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-xs bg-surface-container-lowest p-space-sm rounded-lg border border-surface-container">
                       <div className="flex flex-col">

@@ -49,7 +49,8 @@ resource "aws_iam_policy" "absaflow_services_policy" {
           aws_dynamodb_table.invoices.arn,
           aws_dynamodb_table.buyers.arn,
           aws_dynamodb_table.smes.arn,
-          aws_dynamodb_table.extraction_cache.arn
+          aws_dynamodb_table.extraction_cache.arn,
+          aws_dynamodb_table.narratives.arn
         ]
       },
       {

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Chevron from './Chevron.jsx'
 import { fmt, pillClass } from '../engine/format.js'
-import { disbursementOf } from '../engine/decision.js'
 
 const GROUPS = [
   ['awaiting', 'Awaiting decision'],
@@ -13,10 +12,9 @@ const GROUPS = [
 function statusPill(c) {
   if (c.status === 'blocked') return ['p-halt', 'Duplicate']
   if (c.status === 'decided') {
-    if (c.decision.outcome !== 'approved') return ['p-high', 'Declined']
-    return disbursementOf(c)
-      ? ['p-low', 'Paid']
-      : ['p-neutral', Math.round(c.decision.pct * 100) + '% approved']
+    return c.decision.outcome === 'approved'
+      ? ['p-low', Math.round(c.decision.pct * 100) + '% funded']
+      : ['p-high', 'Declined']
   }
   return [pillClass(c.risk.band), c.risk.band + ' · ' + c.risk.total.toFixed(0)]
 }

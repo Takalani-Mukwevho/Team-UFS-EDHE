@@ -57,11 +57,6 @@ public class DynamoService : IDynamoService
             item["FundingDecision"] = new AttributeValue { S = JsonSerializer.Serialize(invoice.FundingDecision) };
         }
 
-        if (invoice.Disbursement != null)
-        {
-            item["Disbursement"] = new AttributeValue { S = JsonSerializer.Serialize(invoice.Disbursement) };
-        }
-
         var request = new PutItemRequest
         {
             TableName = _invoiceTable,
@@ -265,9 +260,6 @@ public class DynamoService : IDynamoService
                 : null,
             FundingDecision = item.ContainsKey("FundingDecision")
                 ? JsonSerializer.Deserialize<FundingDecision>(item["FundingDecision"].S)
-                : null,
-            Disbursement = item.ContainsKey("Disbursement")
-                ? JsonSerializer.Deserialize<Disbursement>(item["Disbursement"].S)
                 : null,
             CreatedAt = item.TryGetValue("CreatedAt", out var ca) && DateTime.TryParse(ca.S, out var dtCa) ? dtCa : DateTime.UtcNow,
             UpdatedAt = item.TryGetValue("UpdatedAt", out var ua) && DateTime.TryParse(ua.S, out var dtUa) ? dtUa : DateTime.UtcNow
