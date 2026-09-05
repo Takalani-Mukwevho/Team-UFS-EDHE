@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback, Fragment, useEffect } from 'react'
+import { useState, useMemo, useCallback, Fragment, useEffect, useRef } from 'react'
 import { scoreCase } from '../engine/scoring.js'
-import { fmt } from '../engine/format.js'
+import { fmt, fmt2 } from '../engine/format.js'
+import { disbursementOf } from '../engine/decision.js'
 import { useApiData } from '../services/useApiData.js'
 import { updateInvoiceStatus } from '../services/api.js'
 
@@ -17,18 +18,30 @@ import Settled from '../components/Settled.jsx'
 import AuditTrail from '../components/AuditTrail.jsx'
 
 export default function BankingDashboard() {
-  const { invoices: apiCases, buyers, loading, dataSource } = useApiData()
+  const { invoices: apiCases, buyers, loading, dataSource, refetch } = useApiData()
   const [cases, setCases] = useState([])
   const [selectedId, setSelectedId] = useState('c1')
+  const [decisions, setDecisions] = useState({})
   const [audit, setAudit] = useState([])
 
-  // Initialize cases from API data when available
+  // Keep the queue in step with the shared DynamoDB ledger so invoices that are
+  // verified and awaiting approval on the SME side show up here without a manual
+  // refresh.
   useEffect(() => {
-    if (apiCases.length > 0) {
-      setCases(apiCases)
-      setSelectedId(apiCases[0]?.id || 'c1')
-    }
-  }, [apiCases])
+    const id = setInterval(() => refetch(), 6000)
+    return () => clearInterval(id)
+  }, [refetch])
+
+  // Merge the live ledger with any decisions made in this session (a refetch
+  // would otherwise show them as awaiting again) and keep the selection stable.
+  useEffect(() => {
+    if (apiCases.length === 0) return
+    const merged = apiCases.map((c) =>
+      decisions[c.id] ? { ...c, status: 'decided', decision: decisions[c.id] } : c
+    )
+    setCases(merged)
+    setSelectedId((cur) => (apiCases.some((c) => c.id === cur) ? cur : apiCases[0]?.id || 'c1'))
+  }, [apiCases, decisions])
 
   const withRisk = useMemo(() => cases.map((c) => ({ ...c, risk: scoreCase(c, buyers) })), [cases, buyers])
   const selected = withRisk.find((c) => c.id === selectedId) || withRisk[0]
@@ -42,12 +55,19 @@ export default function BankingDashboard() {
   const funded = withRisk.filter((c) => c.status === 'decided' && c.decision.outcome === 'approved')
   const advanced = funded.reduce((s, c) => s + c.decision.offer.net, 0)
   const exposure = funded.reduce((s, c) => s + c.decision.offer.advance, 0)
+
+  // Disbursements only happen once the SME accepts the advance on its portal —
+  // these are the actual sums paid, separate from the desk's approvals above.
+  const disbursedCases = withRisk.filter((c) => !!disbursementOf(c))
+  const paidTotal = disbursedCases.reduce((s, c) => s + (disbursementOf(c)?.net || 0), 0)
+  const paidCount = disbursedCases.length
+
   const overrides = audit.filter((a) => a.overridden).length
 
   const decide = useCallback((c, d) => {
     const at = new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
     const newDecision = { ...d, at };
-    setCases((prev) => prev.map((x) => (x.id === c.id ? { ...x, status: 'decided', decision: newDecision } : x)))
+    setDecisions((prev) => ({ ...prev, [c.id]: newDecision }))
     setAudit((prev) => [{
       at: 'Today ' + at, who: 'Invoice Finance Desk', inv: c.fields.invoiceNumber, sme: c.sme,
       engine: d.engineLine, final: d.finalLine, overridden: d.overridden, reason: d.reason,
@@ -59,7 +79,33 @@ export default function BankingDashboard() {
     });
   }, [])
 
-  if (loading) {
+  // Log each SME acceptance to the audit trail once, as the ledger overlay or
+  // polling brings the disbursement record back to this console.
+  const loggedDisbursements = useRef({})
+  useEffect(() => {
+    withRisk.forEach((c) => {
+      const dis = disbursementOf(c)
+      if (!dis) return
+      const key = (c.raw?.invoiceId || c.id) + '|' + (dis.acceptedAt || '')
+      if (loggedDisbursements.current[key]) return
+      loggedDisbursements.current[key] = true
+      const paidAt = dis.acceptedAt
+        ? new Date(dis.acceptedAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+        : new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+      setAudit((prev) => [{
+        kind: 'disbursement',
+        at: 'Today ' + paidAt,
+        who: 'SME · self-service acceptance',
+        inv: c.fields?.invoiceNumber,
+        sme: c.sme,
+        engine: 'SME accepted the advance',
+        final: 'Paid ' + fmt2(dis.net) + ' (net of fee ' + fmt2(dis.fee) + ')',
+        overridden: false,
+      }].concat(prev))
+    })
+  }, [withRisk])
+
+  if (loading && cases.length === 0) {
     return (
       <div className="wrap">
         <Masthead />
@@ -95,6 +141,7 @@ export default function BankingDashboard() {
       <MetricStrip
         counts={counts} advanced={advanced} exposure={exposure}
         overrides={overrides} fundedCount={funded.length}
+        paidTotal={paidTotal} paidCount={paidCount}
       />
 
       <section className="panel">

@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { zar } from "../engine/format";
 import { POLICY } from "../engine/policy";
-import { sendEmailNotification } from "../services/api";
+import { deskDecisionState, disbursementOf } from "../engine/decision";
+import { sendEmailNotification, updateInvoiceStatus } from "../services/api";
+import { recordSmeAcceptance } from "../services/ledgerBridge";
 
 const FEE_RATE = POLICY.feeRate;
 const MIN_ADVANCE_PCT = 0.3;
 
-export default function InstantFundingOffer({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {} }) {
+export default function InstantFundingOffer({ onContinue, activeInvoice, activeRisk, activeBuyer, buyers = {}, smes = {}, onRefresh, refreshing = false }) {
   if (!activeInvoice) {
     return (
       <div className="max-w-container-max mx-auto w-full px-gutter-desktop py-space-xl">
@@ -18,6 +20,12 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
 
   const inv = activeInvoice;
   const risk = activeRisk;
+  const flags = inv.flags || {};
+  const deskState = flags.deskDecision || deskDecisionState(inv);
+  const creditApproved = deskState === 'approved';
+  // Paid out once the SME has accepted — either recorded this session or read
+  // back from the shared ledger/overlay (so it survives a refresh).
+  const paidOut = !!disbursementOf(inv);
   const GROSS_VALUE = inv.fields.amount;
   const advanceRate = risk ? (POLICY[risk.band] || 0) : 0.5;
   const ADVANCE_CAP = Math.round(GROSS_VALUE * advanceRate);
@@ -30,6 +38,8 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
   const [disbursed, setDisbursed] = useState(false);
   const [sending, setSending] = useState(false);
 
+  const paidNow = disbursed || paidOut;
+
   const fee = useMemo(() => advance * FEE_RATE, [advance]);
   const net = useMemo(() => advance - fee, [advance, fee]);
   const rebate = useMemo(() => GROSS_VALUE - net, [net]);
@@ -37,7 +47,23 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
 
   const handleDisburse = async () => {
     setSending(true);
+    const invoiceId = inv.raw?.invoiceId || inv.raw?.invoiceNumber || inv.id || inv.fields?.invoiceNumber;
+    const acceptedAt = new Date().toISOString();
+    const disbursement = { advance, fee, net, fundingRate: advanceRate, acceptedAt };
+
     try {
+      // Persist the acceptance to the shared ledger (status stays 'Funded' once
+      // the desk has approved; the disbursement record is what the bank console
+      // picks up as the amount paid against this invoice).
+      try {
+        await updateInvoiceStatus(invoiceId, 'Funded', null, { disbursement });
+      } catch (err) {
+        // Backend unreachable — the shared-browser overlay still carries the
+        // acceptance so the two screens stay in step.
+        console.warn('Ledger persist failed, using shared browser overlay:', err.message);
+      }
+      recordSmeAcceptance(invoiceId, disbursement);
+
       await sendEmailNotification({
         subject: `[AbsaFlow] Disbursement Approved — ${invoiceNumber}`,
         message: [
@@ -58,12 +84,12 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
         ].join('\n'),
         eventType: 'disbursement',
       });
-      setDisbursed(true);
     } catch (err) {
       console.error('Email notification failed:', err);
-      setDisbursed(true); // still mark as disbursed for demo
     } finally {
+      setDisbursed(true); // still mark as disbursed for demo
       setSending(false);
+      if (onRefresh) onRefresh();
     }
   };
 
@@ -223,11 +249,47 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
           <div className="lg:col-span-4 flex flex-col gap-space-lg">
             <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-md flex flex-col gap-space-md sticky top-20">
               <div className="flex items-center justify-between">
-                <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">Ready for Disbursal</span>
-                <span className="flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell text-tertiary font-bold">
-                  <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span> SYSTEM READY
+                <span className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface-variant">
+                  {paidNow ? "Advance Disbursed" : creditApproved ? "Ready for Disbursal" : deskState === "declined" ? "Not Approved" : "Credit Desk Review"}
+                </span>
+                <span className={`flex items-center gap-space-3xs font-mono-data-cell text-mono-data-cell font-bold ${
+                  paidNow ? "text-tertiary" : creditApproved ? "text-tertiary" : deskState === "declined" ? "text-error" : "text-primary"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full animate-pulse ${
+                    paidNow ? "bg-tertiary" : creditApproved ? "bg-tertiary" : deskState === "declined" ? "bg-error" : "bg-primary"
+                  }`}></span>
+                  {paidNow ? "PAID TO SME" : creditApproved ? "SYSTEM READY" : deskState === "declined" ? "DECLINED" : "PENDING REVIEW"}
                 </span>
               </div>
+              {!creditApproved && (
+                <div className={`rounded-lg p-space-sm flex flex-col gap-space-xs font-body-sm text-body-sm ${
+                  deskState === "declined"
+                    ? "bg-error-container/60 text-on-error-container"
+                    : "bg-primary/5 text-on-surface-variant"
+                }`}>
+                  {deskState === "declined" ? (
+                    <span>The credit desk did not approve an advance against {invoiceNumber}. No disbursement can be made for this invoice.</span>
+                  ) : (
+                    <>
+                      <span>
+                        The funding recommendation for {invoiceNumber} is with the AbsaFlow credit desk. Once the desk
+                        accepts it, the advance unlocks automatically on this page (status refreshes every few seconds).
+                      </span>
+                      {onRefresh && (
+                        <button
+                          type="button"
+                          onClick={onRefresh}
+                          disabled={refreshing}
+                          className="self-start inline-flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg bg-primary-container text-on-primary font-body-sm text-body-sm font-semibold transition-all hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined text-[1rem]">{refreshing ? "sync" : "refresh"}</span>
+                          <span>{refreshing ? "Checking..." : "Check approval status"}</span>
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
               <div className="bg-surface-container-low p-space-md rounded-lg flex flex-col gap-space-xs">
                 <div className="flex justify-between items-center text-body-sm font-body-sm">
                   <span className="text-on-surface-variant">SME Supplier:</span>
@@ -243,17 +305,34 @@ export default function InstantFundingOffer({ onContinue, activeInvoice, activeR
                 </div>
               </div>
               <div className="flex flex-col py-space-xs">
-                <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Confirmed Cash-Out Transfer</span>
+                <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">
+                  {paidNow ? "Disbursed to your account" : "Confirmed Cash-Out Transfer"}
+                </span>
                 <span className="font-headline-xl text-headline-xl font-bold text-tertiary tracking-tight">{zar(net)}</span>
+                {paidNow && (
+                  <span className="font-body-sm text-body-sm text-tertiary mt-space-3xs">
+                    Paid on {new Date((disbursementOf(inv)?.acceptedAt) || Date.now()).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })} — reflected on the bank console.
+                  </span>
+                )}
               </div>
               <button
                 type="button"
-                disabled={!accepted || disbursed}
+                disabled={!creditApproved || !accepted || paidNow || sending}
                 onClick={handleDisburse}
                 className="w-full bg-primary-container hover:bg-primary text-on-primary font-title-sm text-title-sm py-space-md px-space-md rounded-lg shadow-md flex items-center justify-center gap-space-xs transition-all duration-200 hover:shadow-lg active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-[1.375rem]">bolt</span>
-                <span>{sending ? "Sending notification..." : disbursed ? "Disbursement Initiated" : "Accept Advance & Disburse"}</span>
+                <span>
+                  {sending
+                    ? "Sending notification..."
+                    : paidNow
+                      ? "Disbursement Initiated"
+                      : !creditApproved
+                        ? deskState === "declined"
+                          ? "Advance Not Approved"
+                          : "Awaiting Credit Approval"
+                        : "Accept Advance & Disburse"}
+                </span>
               </button>
               <div className="flex items-start gap-space-xs text-body-sm font-body-sm text-on-surface-variant">
                 <input checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-1 rounded text-primary focus:ring-0 accent-primary cursor-pointer" id="accept-terms" type="checkbox" />
