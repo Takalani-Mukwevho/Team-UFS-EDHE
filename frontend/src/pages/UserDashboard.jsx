@@ -5,6 +5,8 @@ import OcrExtractionReview from "./OcrExtractionReview";
 import BuyerRiskEngine from "./BuyerRiskEngine";
 import InstantFundingOffer from "./InstantFundingOffer";
 import { useApiData } from "../services/useApiData";
+import { updateInvoiceStatus } from "../services/api";
+import { clearLedgerOverlay } from "../services/ledgerBridge";
 import { scoreCase } from "../engine/scoring";
 
 const PAGES = {
@@ -75,9 +77,35 @@ export default function UserDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // Reset also puts every desk-confirmed invoice back to its default
+  // unconfirmed state: the approved ones are reverted on the shared ledger,
+  // recorded acceptances are cleared, and the ledger is re-read so both the
+  // SME portal and the credit desk console show them as awaiting again.
   function handleReset() {
-    setActiveTab("upload");
-    setSelectedInvoiceIdx(0);
+    const approved = combinedInvoices.filter((inv) => {
+      const f = inv?.flags;
+      if (f?.deskDecision) return f.deskDecision === "approved";
+      const s = inv?.raw?.status ?? inv?.status;
+      return s === "Funded" || s === "decided" || s === 4;
+    });
+
+    const reverts = approved.map((inv) => {
+      const ledgerId = inv.raw?.invoiceId || inv.raw?.invoiceNumber || inv.id || inv.fields?.invoiceNumber;
+      if (!ledgerId) return Promise.resolve();
+      return updateInvoiceStatus(ledgerId, "Verified", null, { disbursement: null }).catch((err) => {
+        console.warn("Reset: could not revert invoice on the ledger:", err.message);
+      });
+    });
+
+    Promise.allSettled(reverts).finally(() => {
+      clearLedgerOverlay();
+      setUploadedInvoices([]);
+      setExtraBuyers({});
+      setExtraSmes({});
+      setActiveTab("upload");
+      setSelectedInvoiceIdx(0);
+      refetch();
+    });
   }
 
   const handleUploadInvoice = useCallback((newInvoice, newBuyer, newSme) => {
